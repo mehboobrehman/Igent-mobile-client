@@ -12,6 +12,9 @@ interface FeedItemDao {
     @Query("SELECT * FROM feed_items ORDER BY pubDate DESC")
     fun getAllFeedItems(): Flow<List<FeedItemEntity>>
 
+    @Query("SELECT * FROM feed_items ORDER BY pubDate DESC")
+    suspend fun getAllFeedItemsOnce(): List<FeedItemEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertFeedItems(items: List<FeedItemEntity>)
 

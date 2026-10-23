@@ -2,6 +2,8 @@ package com.igent.mobile.di
 
 import com.igent.mobile.data.remote.ai.GroqApiService
 import com.igent.mobile.data.remote.ai.OpenRouterApiService
+import com.igent.mobile.data.remote.rss.RssApiService
+import com.igent.mobile.data.remote.rss.RssParser
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import dagger.Module
 import dagger.Provides
@@ -21,6 +23,9 @@ annotation class OpenRouterRetrofit
 
 @Qualifier
 annotation class GroqRetrofit
+
+@Qualifier
+annotation class RssRetrofit
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -82,6 +87,18 @@ object NetworkModule {
 
     @Provides
     @Singleton
+    @RssRetrofit
+    fun provideRssRetrofit(
+        okHttpClient: OkHttpClient
+    ): Retrofit {
+        return Retrofit.Builder()
+            .baseUrl("https://www.brecorder.com/")
+            .client(okHttpClient)
+            .build()
+    }
+
+    @Provides
+    @Singleton
     fun provideOpenRouterApiService(
         @OpenRouterRetrofit retrofit: Retrofit
     ): OpenRouterApiService {
@@ -94,5 +111,19 @@ object NetworkModule {
         @GroqRetrofit retrofit: Retrofit
     ): GroqApiService {
         return retrofit.create(GroqApiService::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideRssApiService(
+        @RssRetrofit retrofit: Retrofit
+    ): RssApiService {
+        return retrofit.create(RssApiService::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideRssParser(): RssParser {
+        return RssParser()
     }
 }
