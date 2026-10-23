@@ -21,6 +21,8 @@ class PreferencesDataSource @Inject constructor(
         val API_KEY = stringPreferencesKey("api_key")
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val NOTIFICATIONS_ENABLED = booleanPreferencesKey("notifications_enabled")
+        val STOCK_ALERTS_ENABLED = booleanPreferencesKey("stock_alerts_enabled")
+        val RSS_ALERTS_ENABLED = booleanPreferencesKey("rss_alerts_enabled")
         val PLACEHOLDER_CREDENTIALS = stringPreferencesKey("placeholder_credentials")
     }
 
@@ -37,6 +39,16 @@ class PreferencesDataSource @Inject constructor(
     val notificationsEnabled: Flow<Boolean> = context.dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.NOTIFICATIONS_ENABLED] ?: true
+        }
+
+    val stockAlertsEnabled: Flow<Boolean> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.STOCK_ALERTS_ENABLED] ?: true
+        }
+
+    val rssAlertsEnabled: Flow<Boolean> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.RSS_ALERTS_ENABLED] ?: true
         }
 
     val placeholderCredentials: Flow<String> = context.dataStore.data
@@ -60,6 +72,18 @@ class PreferencesDataSource @Inject constructor(
     suspend fun saveNotificationsEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.NOTIFICATIONS_ENABLED] = enabled
+        }
+    }
+
+    suspend fun saveStockAlertsEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.STOCK_ALERTS_ENABLED] = enabled
+        }
+    }
+
+    suspend fun saveRssAlertsEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.RSS_ALERTS_ENABLED] = enabled
         }
     }
 

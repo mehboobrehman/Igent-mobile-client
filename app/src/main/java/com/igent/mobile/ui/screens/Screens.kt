@@ -14,9 +14,11 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.igent.mobile.ui.Screen
 import com.igent.mobile.ui.chat.ChatScreen
 import com.igent.mobile.ui.rss.RssScreen
 import com.igent.mobile.ui.psx.PsxScreen
+import com.igent.mobile.ui.settings.NotificationSettingsScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -86,21 +88,78 @@ fun IgentAppShell() {
             composable(Screen.Chat.route) { ChatScreen() }
             composable(Screen.Stocks.route) { PsxScreen() }
             composable(Screen.Rss.route) { RssScreen() }
-            composable(Screen.Settings.route) { PlaceholderScreen("Settings Screen") }
+            composable(Screen.Settings.route) {
+                SettingsHubScreen(
+                    onNavigateToNotificationSettings = {
+                        navController.navigate(Screen.NotificationSettings.route)
+                    }
+                )
+            }
+            composable(Screen.NotificationSettings.route) {
+                NotificationSettingsScreen()
+            }
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PlaceholderScreen(title: String) {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(text = title, style = MaterialTheme.typography.headlineMedium)
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(text = "Placeholder ready for implementation", style = MaterialTheme.typography.bodyMedium)
+fun SettingsHubScreen(
+    onNavigateToNotificationSettings: () -> Unit
+) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Settings") }
+            )
+        }
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Card(
+                onClick = onNavigateToNotificationSettings,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Notifications,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Column {
+                            Text(
+                                text = "Notification Preferences",
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            Text(
+                                text = "Configure push, stock, and RSS alerts",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    Icon(
+                        imageVector = Icons.Default.ChevronRight,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
         }
     }
 }
