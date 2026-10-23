@@ -63,6 +63,10 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.navigation.compose)
     
+    // Firebase Messaging BOM & Messaging
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.messaging)
+
     // Hilt DI
     implementation(libs.hilt.android)
     kapt(libs.hilt.compiler)
