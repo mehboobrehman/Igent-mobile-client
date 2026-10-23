@@ -1,0 +1,6 @@
+<resources>
+    <mipmap>
+        <background>@drawable/ic_launcher_background</background>
+        <foreground>@drawable/ic_launcher_foreground</foreground>
+    </mipmap>
+</resources>
