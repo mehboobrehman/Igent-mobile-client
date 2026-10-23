@@ -27,6 +27,12 @@ annotation class GroqRetrofit
 @Qualifier
 annotation class RssRetrofit
 
+@Qualifier
+annotation class PsxPrimaryRetrofit
+
+@Qualifier
+annotation class PsxFallbackRetrofit
+
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
@@ -99,6 +105,36 @@ object NetworkModule {
 
     @Provides
     @Singleton
+    @PsxPrimaryRetrofit
+    fun providePsxPrimaryRetrofit(
+        okHttpClient: OkHttpClient,
+        json: Json
+    ): Retrofit {
+        val contentType = "application/json".toMediaType()
+        return Retrofit.Builder()
+            .baseUrl("https://psxlens.com/")
+            .client(okHttpClient)
+            .addConverterFactory(json.asConverterFactory(contentType))
+            .build()
+    }
+
+    @Provides
+    @Singleton
+    @PsxFallbackRetrofit
+    fun providePsxFallbackRetrofit(
+        okHttpClient: OkHttpClient,
+        json: Json
+    ): Retrofit {
+        val contentType = "application/json".toMediaType()
+        return Retrofit.Builder()
+            .baseUrl("https://api.psxdata.pk/")
+            .client(okHttpClient)
+            .addConverterFactory(json.asConverterFactory(contentType))
+            .build()
+    }
+
+    @Provides
+    @Singleton
     fun provideOpenRouterApiService(
         @OpenRouterRetrofit retrofit: Retrofit
     ): OpenRouterApiService {
@@ -119,6 +155,22 @@ object NetworkModule {
         @RssRetrofit retrofit: Retrofit
     ): RssApiService {
         return retrofit.create(RssApiService::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun providePsxApiService(
+        @PsxPrimaryRetrofit retrofit: Retrofit
+    ): com.igent.mobile.data.remote.psx.PsxApiService {
+        return retrofit.create(com.igent.mobile.data.remote.psx.PsxApiService::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun providePsxDataApiFallbackService(
+        @PsxFallbackRetrofit retrofit: Retrofit
+    ): com.igent.mobile.data.remote.psx.PsxDataApiFallbackService {
+        return retrofit.create(com.igent.mobile.data.remote.psx.PsxDataApiFallbackService::class.java)
     }
 
     @Provides
