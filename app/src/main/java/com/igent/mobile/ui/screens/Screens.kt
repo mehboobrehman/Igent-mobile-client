@@ -15,6 +15,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.igent.mobile.ui.chat.ChatScreen
+import com.igent.mobile.ui.rss.RssScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -83,7 +84,7 @@ fun IgentAppShell() {
             }
             composable(Screen.Chat.route) { ChatScreen() }
             composable(Screen.Stocks.route) { PlaceholderScreen("Stocks & Finance Screen") }
-            composable(Screen.Rss.route) { PlaceholderScreen("RSS Feed Screen") }
+            composable(Screen.Rss.route) { RssScreen() }
             composable(Screen.Settings.route) { PlaceholderScreen("Settings Screen") }
         }
     }
