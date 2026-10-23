@@ -1,5 +1,8 @@
 package com.igent.mobile.di
 
+import com.igent.mobile.data.preferences.PreferencesDataSource
+import com.igent.mobile.data.remote.AuthInterceptor
+import com.igent.mobile.data.remote.SessionManager
 import com.igent.mobile.data.remote.ai.GroqApiService
 import com.igent.mobile.data.remote.ai.OpenRouterApiService
 import com.igent.mobile.data.remote.rss.RssApiService
@@ -49,7 +52,9 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideOkHttpClient(): OkHttpClient {
+    fun provideOkHttpClient(
+        authInterceptor: AuthInterceptor
+    ): OkHttpClient {
         val logging = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
         }
@@ -57,6 +62,7 @@ object NetworkModule {
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(60, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
+            .addInterceptor(authInterceptor)
             .addInterceptor(logging)
             .build()
     }
