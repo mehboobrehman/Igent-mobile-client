@@ -45,8 +45,9 @@ class PreferencesDataSource @Inject constructor(
         }
 
     suspend fun saveApiKey(key: String) {
+        val obfuscated = com.igent.mobile.data.util.KeyObfuscator.obfuscate(key)
         context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.API_KEY] = key
+            preferences[PreferencesKeys.API_KEY] = obfuscated
         }
     }
 
