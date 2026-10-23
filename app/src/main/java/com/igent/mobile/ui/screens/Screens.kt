@@ -1,6 +1,8 @@
 package com.igent.mobile.ui.screens
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -15,6 +17,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.igent.mobile.ui.Screen
+import com.igent.mobile.ui.auth.AuthScreen
 import com.igent.mobile.ui.chat.ChatScreen
 import com.igent.mobile.ui.rss.RssScreen
 import com.igent.mobile.ui.psx.PsxScreen
@@ -35,7 +38,6 @@ fun IgentAppShell(initialTargetScreen: String? = null) {
                 "rss", "news" -> Screen.Rss.route
                 else -> Screen.Chat.route
             }
-            // Navigate directly to target or ensure we pop to auth / start
             navController.navigate(destination) {
                 popUpTo(Screen.Auth.route) { inclusive = false }
                 launchSingleTop = true
@@ -54,7 +56,11 @@ fun IgentAppShell(initialTargetScreen: String? = null) {
                         IconButton(onClick = { navController.navigate(Screen.Settings.route) }) {
                             Icon(Icons.Default.Settings, contentDescription = "Settings")
                         }
-                    }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
                 )
             }
         },
@@ -95,11 +101,16 @@ fun IgentAppShell(initialTargetScreen: String? = null) {
             modifier = Modifier.padding(innerPadding)
         ) {
             composable(Screen.Auth.route) {
-                AuthScreen(onLoginSuccess = {
-                    navController.navigate(Screen.Chat.route) {
-                        popUpTo(Screen.Auth.route) { inclusive = true }
+                AuthScreen(
+                    onNavigateToMain = {
+                        navController.navigate(Screen.Chat.route) {
+                            popUpTo(Screen.Auth.route) { inclusive = true }
+                        }
+                    },
+                    onNavigateToSettings = {
+                        navController.navigate(Screen.Settings.route)
                     }
-                })
+                )
             }
             composable(Screen.Chat.route) { ChatScreen() }
             composable(Screen.Stocks.route) { PsxScreen() }
@@ -126,7 +137,7 @@ fun SettingsHubScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Settings") }
+                title = { Text("Settings Hub") }
             )
         }
     ) { innerPadding ->
@@ -175,29 +186,6 @@ fun SettingsHubScreen(
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-            }
-        }
-    }
-}
-
-@Composable
-fun AuthScreen(onLoginSuccess: () -> Unit) {
-    Box(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text(text = "Welcome to Igent", style = MaterialTheme.typography.headlineLarge)
-            Spacer(modifier = Modifier.height(24.dp))
-            Button(
-                onClick = onLoginSuccess,
-                modifier = Modifier.fillMaxWidth().height(50.dp)
-            ) {
-                Text(text = "Sign In / Enter App")
             }
         }
     }
