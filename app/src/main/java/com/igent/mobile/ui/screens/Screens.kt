@@ -22,10 +22,26 @@ import com.igent.mobile.ui.settings.NotificationSettingsScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun IgentAppShell() {
+fun IgentAppShell(initialTargetScreen: String? = null) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
+
+    // Handle deep linking on launch once navController is ready
+    LaunchedEffect(initialTargetScreen) {
+        if (!initialTargetScreen.isNullOrBlank()) {
+            val destination = when (initialTargetScreen.lowercase()) {
+                "stocks", "stock" -> Screen.Stocks.route
+                "rss", "news" -> Screen.Rss.route
+                else -> Screen.Chat.route
+            }
+            // Navigate directly to target or ensure we pop to auth / start
+            navController.navigate(destination) {
+                popUpTo(Screen.Auth.route) { inclusive = false }
+                launchSingleTop = true
+            }
+        }
+    }
 
     val showBottomBar = currentRoute != Screen.Auth.route
 

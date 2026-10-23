@@ -25,30 +25,23 @@ class IgentFirebaseMessagingService : FirebaseMessagingService() {
         super.onMessageReceived(remoteMessage)
         Log.d(TAG, "From: ${remoteMessage.from}")
 
-        // Check if message contains a data payload.
-        remoteMessage.data.isNotEmpty().let {
-            Log.d(TAG, "Message data payload: ${remoteMessage.data}")
-            handleDataPayload(remoteMessage.data)
-        }
+        val data = remoteMessage.data
+        val notification = remoteMessage.notification
 
-        // Check if message contains a notification payload.
-        remoteMessage.notification?.let {
-            Log.d(TAG, "Message Notification Body: ${it.body}")
-            sendNotification(it.title ?: getString(R.string.app_name), it.body ?: "")
-        }
+        val title = notification?.title ?: data["title"] ?: getString(R.string.app_name)
+        val body = notification?.body ?: data["message"] ?: data["body"] ?: "You have a new update"
+        val targetScreen = data["screen"] ?: data["type"] ?: "chat"
+
+        sendNotification(title, body, targetScreen)
     }
 
-    private fun handleDataPayload(data: Map<String, String>) {
-        val title = data["title"] ?: "Igent Notification"
-        val message = data["message"] ?: data["body"] ?: "You have a new message"
-        sendNotification(title, message)
-    }
-
-    private fun sendNotification(title: String, messageBody: String) {
+    private fun sendNotification(title: String, messageBody: String, targetScreen: String) {
         val intent = Intent(this, MainActivity::class.java).apply {
-            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            putExtra(EXTRA_TARGET_SCREEN, targetScreen)
         }
-        val requestCode = 0
+
+        val requestCode = System.currentTimeMillis().toInt()
         val pendingIntent = PendingIntent.getActivity(
             this,
             requestCode,
@@ -56,32 +49,66 @@ class IgentFirebaseMessagingService : FirebaseMessagingService() {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
-        val channelId = "igent_fcm_channel"
+        val channelId = when (targetScreen.lowercase()) {
+            "stocks", "stock" -> CHANNEL_ID_STOCKS
+            "rss", "news" -> CHANNEL_ID_RSS
+            else -> CHANNEL_ID_GENERAL
+        }
+
+        createNotificationChannels(this)
+
         val notificationBuilder = NotificationCompat.Builder(this, channelId)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle(title)
             .setContentText(messageBody)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
 
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-
-        // Since android Oreo notification channel is needed.
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                channelId,
-                "Igent Notifications",
-                NotificationManager.IMPORTANCE_DEFAULT
-            ).apply {
-                description = "Notifications from Igent FCM"
-            }
-            notificationManager.createNotificationChannel(channel)
-        }
-
-        notificationManager.notify(System.currentTimeMillis().toInt(), notificationBuilder.build())
+        notificationManager.notify(requestCode, notificationBuilder.build())
     }
 
     companion object {
         private const val TAG = "IgentFCMService"
+        const val EXTRA_TARGET_SCREEN = "extra_target_screen"
+
+        const val CHANNEL_ID_GENERAL = "igent_general_channel"
+        const val CHANNEL_ID_STOCKS = "igent_stocks_channel"
+        const val CHANNEL_ID_RSS = "igent_rss_channel"
+
+        fun createNotificationChannels(context: Context) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+                val generalChannel = NotificationChannel(
+                    CHANNEL_ID_GENERAL,
+                    "General Notifications",
+                    NotificationManager.IMPORTANCE_DEFAULT
+                ).apply {
+                    description = "General announcements and alerts"
+                }
+
+                val stocksChannel = NotificationChannel(
+                    CHANNEL_ID_STOCKS,
+                    "Stock Market Alerts",
+                    NotificationManager.IMPORTANCE_HIGH
+                ).apply {
+                    description = "PSX price updates and market trends"
+                }
+
+                val rssChannel = NotificationChannel(
+                    CHANNEL_ID_RSS,
+                    "RSS Feed Alerts",
+                    NotificationManager.IMPORTANCE_LOW
+                ).apply {
+                    description = "New articles and news updates"
+                }
+
+                notificationManager.createNotificationChannels(
+                    listOf(generalChannel, stocksChannel, rssChannel)
+                )
+            }
+        }
     }
 }
