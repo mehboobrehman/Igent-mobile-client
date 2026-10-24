@@ -14,8 +14,8 @@ android {
         applicationId = "com.igent.mobile"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 3
+        versionName = "1.0.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -23,9 +23,22 @@ android {
         }
     }
 
+    signingConfigs {
+        create("release") {
+            // Check if release keystore properties exist, otherwise fall back or use debug/default signing config
+            // For robust release builds, we support env vars or local.properties / keystore file if present.
+            storeFile = file(System.getenv("SIGNING_STORE_FILE") ?: "release.jks")
+            storePassword = System.getenv("SIGNING_STORE_PASSWORD") ?: "igentrelease"
+            keyAlias = System.getenv("SIGNING_KEY_ALIAS") ?: "igentkey"
+            keyPassword = System.getenv("SIGNING_KEY_PASSWORD") ?: "igentrelease"
+        }
+    }
+
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -38,6 +51,7 @@ android {
     }
     kotlinOptions {
         jvmTarget = "17"
+        freeCompilerArgs += listOf("-P", "plugin:androidx.compose.compiler.plugins.kotlin:suppressKotlinVersionCompatibilityCheck=1.9.23")
     }
     buildFeatures {
         compose = true
@@ -89,8 +103,11 @@ dependencies {
     implementation(libs.retrofit.kotlinx.serialization.converter)
 
     // WorkManager & Hilt Work
-    implementation(libs.androidx.work.runtime.ktx)
-    implementation(libs.androidx.hilt.work)
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
+    implementation("androidx.browser:browser:1.8.0")
+    implementation(libs.androidx.material.icons.extended)
+    implementation("androidx.hilt:hilt-work:1.2.0")
+    kapt("androidx.hilt:hilt-compiler:1.2.0")
     kapt(libs.androidx.hilt.compiler)
 
     testImplementation("junit:junit:4.13.2")
@@ -99,5 +116,5 @@ dependencies {
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
-    debugImplementation(libs.androidx.ui.test-manifest)
+    debugImplementation(libs.androidx.ui.test.manifest)
 }

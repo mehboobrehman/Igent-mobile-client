@@ -115,8 +115,7 @@ fun ChatScreen(
                                     CircularProgressIndicator(
                                         modifier = Modifier.size(16.dp),
                                         strokeWidth = 2.dp
-                                    ) {
-                                    }
+                                    )
                                     Text(
                                         text = "Igent AI is thinking...",
                                         style = MaterialTheme.typography.bodyMedium,

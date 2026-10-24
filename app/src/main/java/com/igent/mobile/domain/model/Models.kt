@@ -25,7 +25,8 @@ data class FeedItem(
     val description: String,
     val link: String,
     val pubDate: String,
-    val source: String
+    val source: String,
+    val imageUrl: String? = null
 )
 
 data class UserPlaceholder(

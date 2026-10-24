@@ -22,8 +22,8 @@ class NetworkConnectivityObserver @Inject constructor(
 
     val isConnected: Flow<Boolean> = callbackFlow {
         val callback = object : ConnectivityManager.NetworkCallback() {
-            override fun available(network: Network) {
-                super.available(network)
+            override fun onAvailable(network: Network) {
+                super.onAvailable(network)
                 trySend(true)
             }
 

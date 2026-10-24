@@ -36,9 +36,7 @@ class IgentApplication : Application(), androidx.work.Configuration.Provider {
 
         val syncWorkRequest = PeriodicWorkRequestBuilder<BackgroundSyncWorker>(
             repeatInterval = 4,
-            repeatIntervalTimeUnit = TimeUnit.HOURS,
-            flexTimeInterval = 30,
-            flexTimeIntervalTimeUnit = TimeUnit.MINUTES
+            repeatIntervalTimeUnit = TimeUnit.HOURS
         )
             .setConstraints(constraints)
             .build()

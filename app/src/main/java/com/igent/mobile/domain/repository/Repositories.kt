@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.Flow
 
 interface AiRepository {
     suspend fun sendMessage(prompt: String): Result<Message>
+    fun sendMessageStream(prompt: String): Flow<String>
     fun getMessageHistory(): Flow<List<Message>>
 }
 

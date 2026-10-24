@@ -1,5 +1,5 @@
 <resources>
-    <style name="Theme.IgentMobile" parent="Theme.Material3.DayNight.NoActionBar">
+    <style name="Theme.IgentMobile" parent="android:Theme.Material.Light.NoActionBar">
         <!-- Customize your theme here -->
     </style>
 </resources>
