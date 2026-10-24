@@ -28,7 +28,17 @@ class PreferencesDataSource @Inject constructor(
 
     val apiKey: Flow<String> = context.dataStore.data
         .map { preferences ->
-            preferences[PreferencesKeys.API_KEY] ?: ""
+            val stored = preferences[PreferencesKeys.API_KEY]
+            if (!stored.isNullOrBlank()) {
+                stored
+            } else {
+                val defaultConfigKey = com.igent.mobile.BuildConfig.OPENROUTER_API_KEY_1
+                if (!defaultConfigKey.isNullOrBlank()) {
+                    com.igent.mobile.data.util.KeyObfuscator.obfuscate(defaultConfigKey)
+                } else {
+                    ""
+                }
+            }
         }
 
     val themeMode: Flow<String> = context.dataStore.data
