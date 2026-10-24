@@ -1,0 +1,9 @@
+*.jks
+*.keystore
+.gradle/
+build/
+app/build/
+*.zip
+.idea/
+.DS_Store
+*.iml
