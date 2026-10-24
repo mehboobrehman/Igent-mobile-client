@@ -7,3 +7,5 @@ app/build/
 .idea/
 .DS_Store
 *.iml
+local.properties
+gradle.properties

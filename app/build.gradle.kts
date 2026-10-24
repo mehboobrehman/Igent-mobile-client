@@ -10,41 +10,33 @@ android {
     namespace = "com.igent.mobile"
     compileSdk = 34
 
+    signingConfigs {
+        create("release") {
+            storeFile = file("release.jks")
+            storePassword = "password"
+            keyAlias = "key0"
+            keyPassword = "password"
+        }
+    }
+
     defaultConfig {
         applicationId = "com.igent.mobile"
         minSdk = 26
         targetSdk = 34
-        versionCode = 4
-        versionName = "1.0.3"
+        versionCode = 5
+        versionName = "1.0.4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
         }
+
+        val key1 = project.findProperty("openrouter.api.key.1") as? String ?: ""
+        val key2 = project.findProperty("openrouter.api.key.2") as? String ?: ""
+        buildConfigField("String", "OPENROUTER_API_KEY_1", "\"$key1\"")
+        buildConfigField("String", "OPENROUTER_API_KEY_2", "\"$key2\"")
     }
 
-    signingConfigs {
-        create("release") {
-            // Check if release keystore properties exist, otherwise fall back or use debug/default signing config
-            // For robust release builds, we support env vars or local.properties / keystore file if present.
-            storeFile = file(System.getenv("SIGNING_STORE_FILE") ?: "release.jks")
-            storePassword = System.getenv("SIGNING_STORE_PASSWORD") ?: "igentrelease"
-            keyAlias = System.getenv("SIGNING_KEY_ALIAS") ?: "igentkey"
-            keyPassword = System.getenv("SIGNING_KEY_PASSWORD") ?: "igentrelease"
-        }
-    }
-
-    buildTypes {
-        release {
-            isMinifyEnabled = true
-            isShrinkResources = true
-            signingConfig = signingConfigs.getByName("release")
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
-        }
-    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -55,6 +47,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.10"
@@ -62,6 +55,17 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = false
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 }

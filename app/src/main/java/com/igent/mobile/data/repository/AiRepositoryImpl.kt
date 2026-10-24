@@ -58,9 +58,10 @@ class AiRepositoryImpl @Inject constructor(
             var aiResponseContent = ""
             var success = false
 
-            // 1. Try OpenRouter first if api key or default model configured
+            // 1. Try OpenRouter first with primary key, then fallback to secondary key if primary fails
             try {
-                val openRouterKey = if (apiKey.isNotBlank()) "Bearer $apiKey" else "Bearer sk-or-v1-placeholder"
+                val primaryKey = apiKey.ifBlank { com.igent.mobile.BuildConfig.OPENROUTER_API_KEY_1 }
+                val openRouterKey = if (primaryKey.isNotBlank()) "Bearer $primaryKey" else "Bearer sk-or-v1-placeholder"
                 val request = ChatRequest(
                     model = "anthropic/claude-3-haiku",
                     messages = messagesList,
@@ -76,7 +77,29 @@ class AiRepositoryImpl @Inject constructor(
                     success = true
                 }
             } catch (e: Exception) {
-                // OpenRouter failed, attempt Groq fallback
+                // Primary OpenRouter key/request failed, try secondary OpenRouter key
+                try {
+                    val secondaryKey = com.igent.mobile.BuildConfig.OPENROUTER_API_KEY_2
+                    if (secondaryKey.isNotBlank()) {
+                        val openRouterKey2 = "Bearer $secondaryKey"
+                        val request = ChatRequest(
+                            model = "anthropic/claude-3-haiku",
+                            messages = messagesList,
+                            stream = false
+                        )
+                        val response = openRouterApiService.createChatCompletion(
+                            authorization = openRouterKey2,
+                            request = request
+                        )
+                        val content = response.choices?.firstOrNull()?.message?.content
+                        if (!content.isNullOrBlank()) {
+                            aiResponseContent = content
+                            success = true
+                        }
+                    }
+                } catch (e2: Exception) {
+                    // Secondary OpenRouter key also failed
+                }
             }
 
             // 2. Fallback to Groq if OpenRouter failed
