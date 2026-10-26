@@ -63,16 +63,37 @@ class PsxViewModel @Inject constructor(
                     }
                 },
                 onFailure = { error ->
+                    val cleanMessage = getCleanErrorMessage(error)
                     _uiState.update {
                         it.copy(
                             isLoading = false,
                             isRefreshing = false,
-                            errorMessage = error.message ?: "Failed to load PSX stocks"
+                            errorMessage = cleanMessage
                         )
                     }
                 }
             )
         }
+    }
+
+    private fun getCleanErrorMessage(error: Throwable): String {
+        val message = error.message ?: ""
+        return if (error is java.net.UnknownHostException ||
+            error is java.io.IOException ||
+            message.contains("UnknownHostException", ignoreCase = true) ||
+            message.contains("api.psxdata.pk", ignoreCase = true) ||
+            message.contains("psxlens.com", ignoreCase = true) ||
+            message.contains("Unable to resolve host", ignoreCase = true) ||
+            message.contains("No address associated with hostname", ignoreCase = true)
+        ) {
+            "Unable to connect to PSX stock servers. Please check your network connection."
+        } else {
+            message.ifBlank { "Unable to connect to PSX stock servers. Please check your network connection." }
+        }
+    }
+
+    fun clearError() {
+        _uiState.update { it.copy(errorMessage = null) }
     }
 
     fun updateSearchQuery(query: String) {

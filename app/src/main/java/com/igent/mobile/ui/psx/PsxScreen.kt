@@ -159,6 +159,11 @@ fun PsxScreen(
                         TextButton(onClick = { viewModel.refresh() }) {
                             Text("Retry")
                         }
+                    },
+                    dismissAction = {
+                        TextButton(onClick = { viewModel.clearError() }) {
+                            Text("Dismiss")
+                        }
                     }
                 ) {
                     Text(text = errorMsg)

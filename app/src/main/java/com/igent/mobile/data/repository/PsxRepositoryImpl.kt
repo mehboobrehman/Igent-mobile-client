@@ -95,10 +95,13 @@ class PsxRepositoryImpl @Inject constructor(
                 Result.success(remoteStocks)
             }
         } catch (e: Exception) {
-            // Fall back to local cache if both remote and fallback fail
-            val cached = stockDao.getAllStocks()
-            // We can return cached if available
-            Result.failure(e)
+            // Both primary and fallback APIs failed (e.g. UnknownHostException, IOException, etc.)
+            val cached = stockDao.getDirectStocks()
+            if (cached.isNotEmpty()) {
+                Result.success(cached.map { it.toDomain() })
+            } else {
+                Result.failure(Exception("Unable to connect to PSX stock servers. Please check your network connection."))
+            }
         }
     }
 
@@ -127,7 +130,7 @@ class PsxRepositoryImpl @Inject constructor(
             if (entity != null) {
                 Result.success(entity.toDomain())
             } else {
-                Result.failure(e)
+                Result.failure(Exception("Unable to connect to PSX stock servers. Please check your network connection."))
             }
         }
     }
