@@ -52,30 +52,29 @@ class ChatViewModel @Inject constructor(
         _uiState.update { it.copy(inputPrompt = "", isLoading = true, streamingText = "", errorMessage = null) }
 
         viewModelScope.launch {
-            // First try streaming if supported / available, or fallback to regular send message use case
             try {
                 var collectedText = ""
-                aiRepository.sendMessageStream(prompt).catch { e ->
-                    // fallback or error in stream
+                aiRepository.sendMessageStream(prompt).catch { _ ->
+                    // fallback handled below if collectedText remains blank
                 }.collect { chunk ->
-                    collectedText += chunk
-                    _uiState.update { it.copy(streamingText = collectedText) }
+                    if (chunk.isNotBlank()) {
+                        collectedText += chunk
+                        _uiState.update { it.copy(streamingText = collectedText) }
+                    }
                 }
 
-                // If streaming didn't produce content or we want to ensure robust storage via use case
                 if (collectedText.isBlank()) {
+                    // Streaming failed or returned blank, smoothly fallback to non-streaming use case
                     val result = sendAiMessageUseCase(prompt)
                     if (result.isFailure) {
                         _uiState.update { it.copy(errorMessage = result.exceptionOrNull()?.message ?: "Failed to send message") }
                     }
                 } else {
-                    // Save AI response message to db via repository/use case if not already saved by repo
-                    // Actually AiRepositoryImpl sendMessage already saves to DB. Let's make sure sendMessage is invoked or simulated if streaming was raw.
-                    // To keep it super clean and robust: let's invoke sendAiMessageUseCase which handles DB storage & API fallback robustly.
-                    sendAiMessageUseCase(prompt)
+                    // Streaming succeeded, save the interaction to local database
+                    aiRepository.saveAiInteraction(prompt, collectedText)
                 }
             } catch (e: Exception) {
-                // Fallback to standard sendMessage use case
+                // Global fallback to standard sendMessage use case
                 val result = sendAiMessageUseCase(prompt)
                 if (result.isFailure) {
                     _uiState.update { it.copy(errorMessage = result.exceptionOrNull()?.message ?: "An error occurred") }

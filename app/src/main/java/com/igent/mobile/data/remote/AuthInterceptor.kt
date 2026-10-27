@@ -50,9 +50,15 @@ class AuthInterceptor @Inject constructor(
         }
 
         val response = chain.proceed(requestBuilder.build())
+        val urlStr = originalRequest.url.toString()
 
-        // Handle 401 Unauthorized globally
-        if (response.code == 401) {
+        // Handle 401 Unauthorized globally for app backend endpoints ONLY.
+        // External third-party requests (OpenRouter, Groq, Pollinations) should NOT clear session on 401.
+        val isExternal = urlStr.contains("openrouter.ai") || 
+                        urlStr.contains("api.groq.com") || 
+                        urlStr.contains("pollinations.ai")
+
+        if (response.code == 401 && !isExternal) {
             sessionManager.handleUnauthorized()
         }
 

@@ -10,6 +10,7 @@ interface AiRepository {
     suspend fun sendMessage(prompt: String): Result<Message>
     fun sendMessageStream(prompt: String): Flow<String>
     fun getMessageHistory(): Flow<List<Message>>
+    suspend fun saveAiInteraction(prompt: String, response: String): Result<Message>
 }
 
 interface PsxRepository {
