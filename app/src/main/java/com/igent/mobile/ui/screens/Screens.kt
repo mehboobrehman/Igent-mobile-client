@@ -108,7 +108,9 @@ fun IgentAppShell(initialTargetScreen: String? = null) {
                         }
                     },
                     onNavigateToSettings = {
-                        navController.navigate(Screen.Settings.route)
+                        navController.navigate(Screen.Settings.route) {
+                            popUpTo(Screen.Auth.route) { inclusive = true }
+                        }
                     }
                 )
             }
@@ -119,6 +121,9 @@ fun IgentAppShell(initialTargetScreen: String? = null) {
                 SettingsHubScreen(
                     onNavigateToNotificationSettings = {
                         navController.navigate(Screen.NotificationSettings.route)
+                    },
+                    onNavigateToAuth = {
+                        navController.navigate(Screen.Auth.route)
                     }
                 )
             }
@@ -132,7 +137,8 @@ fun IgentAppShell(initialTargetScreen: String? = null) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsHubScreen(
-    onNavigateToNotificationSettings: () -> Unit
+    onNavigateToNotificationSettings: () -> Unit,
+    onNavigateToAuth: () -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -148,6 +154,46 @@ fun SettingsHubScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            Card(
+                onClick = onNavigateToAuth,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Lock,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Column {
+                            Text(
+                                text = "Authentication & API Keys",
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            Text(
+                                text = "Manage API keys and re-authenticate",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    Icon(
+                        imageVector = Icons.Default.ChevronRight,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
             Card(
                 onClick = onNavigateToNotificationSettings,
                 modifier = Modifier.fillMaxWidth()
