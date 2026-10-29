@@ -45,3 +45,20 @@ interface GroqApiService {
         @Body request: ChatRequest
     ): Response<ResponseBody>
 }
+
+interface ZenApiService {
+    @Headers("Content-Type: application/json")
+    @POST("v1/chat/completions")
+    suspend fun createChatCompletion(
+        @Header("Authorization") authorization: String,
+        @Body request: ChatRequest
+    ): ChatResponse
+
+    @Streaming
+    @Headers("Content-Type: application/json")
+    @POST("v1/chat/completions")
+    suspend fun createChatCompletionStream(
+        @Header("Authorization") authorization: String,
+        @Body request: ChatRequest
+    ): Response<ResponseBody>
+}

@@ -4,8 +4,10 @@ import android.content.Context
 import androidx.room.Room
 import com.igent.mobile.data.local.IgentDatabase
 import com.igent.mobile.data.local.dao.FeedItemDao
+import com.igent.mobile.data.local.dao.IdeaCardDao
 import com.igent.mobile.data.local.dao.MessageDao
 import com.igent.mobile.data.local.dao.StockDao
+import com.igent.mobile.data.local.dao.WeeklySummaryDao
 import com.igent.mobile.data.preferences.PreferencesDataSource
 import com.igent.mobile.data.repository.AiRepositoryImpl
 import com.igent.mobile.data.repository.PsxRepositoryImpl
@@ -53,6 +55,18 @@ object DatabaseModule {
     @Singleton
     fun provideFeedItemDao(database: IgentDatabase): FeedItemDao {
         return database.feedItemDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideIdeaCardDao(database: IgentDatabase): IdeaCardDao {
+        return database.ideaCardDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideWeeklySummaryDao(database: IgentDatabase): WeeklySummaryDao {
+        return database.weeklySummaryDao()
     }
 }
 

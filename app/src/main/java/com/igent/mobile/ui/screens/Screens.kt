@@ -19,8 +19,10 @@ import androidx.navigation.compose.rememberNavController
 import com.igent.mobile.ui.Screen
 import com.igent.mobile.ui.auth.AuthScreen
 import com.igent.mobile.ui.chat.ChatScreen
-import com.igent.mobile.ui.rss.RssScreen
+import com.igent.mobile.ui.analysis.FinancialAnalysisScreen
 import com.igent.mobile.ui.psx.PsxScreen
+import com.igent.mobile.ui.rss.RssScreen
+import com.igent.mobile.ui.idea.IdeaCardsScreen
 import com.igent.mobile.ui.settings.NotificationSettingsScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -70,6 +72,8 @@ fun IgentAppShell(initialTargetScreen: String? = null) {
                     val items = listOf(
                         Triple(Screen.Chat, "Chat", Icons.Default.Chat),
                         Triple(Screen.Stocks, "Stocks", Icons.Default.TrendingUp),
+                        Triple(Screen.Analysis, "Audit", Icons.Default.Analytics),
+                        Triple(Screen.IdeaCards, "Ideas", Icons.Default.Lightbulb),
                         Triple(Screen.Rss, "RSS", Icons.Default.RssFeed),
                         Triple(Screen.Settings, "Settings", Icons.Default.Settings)
                     )
@@ -116,6 +120,8 @@ fun IgentAppShell(initialTargetScreen: String? = null) {
             }
             composable(Screen.Chat.route) { ChatScreen() }
             composable(Screen.Stocks.route) { PsxScreen() }
+            composable(Screen.Analysis.route) { FinancialAnalysisScreen() }
+            composable(Screen.IdeaCards.route) { IdeaCardsScreen() }
             composable(Screen.Rss.route) { RssScreen() }
             composable(Screen.Settings.route) {
                 SettingsHubScreen(

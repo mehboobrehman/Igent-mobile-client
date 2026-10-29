@@ -1,6 +1,7 @@
 package com.igent.mobile.data.repository
 
 import com.igent.mobile.data.local.dao.MessageDao
+import com.igent.mobile.data.local.dao.StockDao
 import com.igent.mobile.data.local.entity.MessageEntity
 import com.igent.mobile.data.preferences.PreferencesDataSource
 import com.igent.mobile.data.remote.ai.ChatDelta
@@ -9,6 +10,7 @@ import com.igent.mobile.data.remote.ai.ChatRequest
 import com.igent.mobile.data.remote.ai.ChatResponse
 import com.igent.mobile.data.remote.ai.GroqApiService
 import com.igent.mobile.data.remote.ai.OpenRouterApiService
+import com.igent.mobile.data.remote.ai.ZenApiService
 import com.igent.mobile.data.util.KeyObfuscator
 import com.igent.mobile.domain.model.Message
 import com.igent.mobile.domain.repository.AiRepository
@@ -31,8 +33,10 @@ import javax.inject.Singleton
 @Singleton
 class AiRepositoryImpl @Inject constructor(
     private val messageDao: MessageDao,
+    private val stockDao: StockDao,
     private val openRouterApiService: OpenRouterApiService,
     private val groqApiService: GroqApiService,
+    private val zenApiService: ZenApiService,
     private val preferencesDataSource: PreferencesDataSource,
     private val okHttpClient: OkHttpClient,
     private val json: Json
@@ -52,6 +56,13 @@ class AiRepositoryImpl @Inject constructor(
         "gemma2-9b-it"
     )
 
+    private val zenModels = listOf(
+        "zen-gpt",
+        "zen-chat",
+        "gpt-4o-mini",
+        "llama-3.1-70b"
+    )
+
     override suspend fun sendMessage(prompt: String): Result<Message> = withContext(Dispatchers.IO) {
         try {
             val userMessage = Message(
@@ -62,6 +73,32 @@ class AiRepositoryImpl @Inject constructor(
                 isFromUser = true
             )
             messageDao.insertMessage(MessageEntity.fromDomain(userMessage))
+
+            // Fetch live PSX stock quotes and market data from local cache (StockDao)
+            val stocks = try {
+                stockDao.getAllStocks().first()
+            } catch (e: Exception) {
+                emptyList()
+            }
+
+            val marketDataContext = buildString {
+                appendLine("=== LIVE PSX MARKET DATA CONTEXT ===")
+                if (stocks.isNotEmpty()) {
+                    appendLine("Current cached stock quotes (${stocks.size} stocks):")
+                    stocks.forEach { stock ->
+                        val sign = if (stock.change >= 0) "+" else ""
+                        appendLine("- ${stock.symbol} (${stock.name}): Price = ${stock.price} PKR, Change = $sign${stock.change} (${sign}${stock.percentChange}%), High = ${stock.high}, Low = ${stock.low}, Volume = ${stock.volume}")
+                    }
+                } else {
+                    appendLine("No cached stock quotes currently available. Please advise based on general PSX market conditions.")
+                }
+                appendLine("=====================================")
+            }
+
+            val systemMessage = ChatMessage(
+                role = "system",
+                content = "You are Igent, an expert financial advisor and Pakistan Stock Exchange (PSX) market assistant. You have access to real-time cached market quotes and data. Always incorporate these live market quotes and prices into your answers when discussing stocks or market conditions.\n\n$marketDataContext"
+            )
 
             val history = try {
                 messageDao.getAllMessages().first().takeLast(10).map { entity ->
@@ -74,10 +111,12 @@ class AiRepositoryImpl @Inject constructor(
                 emptyList()
             }
 
-            val messagesList = if (history.isEmpty()) {
-                listOf(ChatMessage(role = "user", content = prompt))
+            val messagesList = mutableListOf<ChatMessage>()
+            messagesList.add(systemMessage)
+            if (history.isNotEmpty()) {
+                messagesList.addAll(history)
             } else {
-                history
+                messagesList.add(ChatMessage(role = "user", content = prompt))
             }
 
             val rawKey = preferencesDataSource.apiKey.first()
@@ -88,7 +127,7 @@ class AiRepositoryImpl @Inject constructor(
 
             // 1. Try OpenRouter with various keys and models (Primary then Free models)
             val openRouterKeys = mutableListOf<String>()
-            if (apiKey.isNotBlank() && !apiKey.startsWith("gsk_")) openRouterKeys.add(apiKey)
+            if (apiKey.isNotBlank() && !apiKey.startsWith("gsk_") && !apiKey.startsWith("zen_")) openRouterKeys.add(apiKey)
             if (com.igent.mobile.BuildConfig.OPENROUTER_API_KEY_1.isNotBlank()) openRouterKeys.add(com.igent.mobile.BuildConfig.OPENROUTER_API_KEY_1)
             if (com.igent.mobile.BuildConfig.OPENROUTER_API_KEY_2.isNotBlank()) openRouterKeys.add(com.igent.mobile.BuildConfig.OPENROUTER_API_KEY_2)
             openRouterKeys.add("sk-or-v1-placeholder")
@@ -137,7 +176,32 @@ class AiRepositoryImpl @Inject constructor(
                 }
             }
 
-            // 3. Fallback to Pollinations AI (Public Free API)
+            // 3. Try Zen AI provider integration if previous providers failed
+            if (!success) {
+                val zenKeys = mutableListOf<String>()
+                if (apiKey.isNotBlank() && (apiKey.startsWith("zen_") || apiKey.length > 20)) zenKeys.add(apiKey)
+                zenKeys.add("zen-placeholder-key")
+
+                outer@for (key in zenKeys.distinct()) {
+                    val authHeader = "Bearer $key"
+                    for (modelName in zenModels) {
+                        try {
+                            val request = ChatRequest(model = modelName, messages = messagesList, stream = false)
+                            val response = zenApiService.createChatCompletion(authorization = authHeader, request = request)
+                            val content = response.choices?.firstOrNull()?.message?.content
+                            if (!content.isNullOrBlank()) {
+                                aiResponseContent = content
+                                success = true
+                                break@outer
+                            }
+                        } catch (e: Exception) {
+                            // Continue to next model/key
+                        }
+                    }
+                }
+            }
+
+            // 4. Fallback to Pollinations AI (Public Free API)
             if (!success) {
                 val pollinationsContent = callPollinationsAi(messagesList)
                 if (!pollinationsContent.isNullOrBlank()) {
@@ -146,7 +210,7 @@ class AiRepositoryImpl @Inject constructor(
                 }
             }
 
-            // 4. Ultimate intelligent local fallback if everything else fails (offline)
+            // 5. Ultimate intelligent local fallback if everything else fails (offline)
             if (!success || aiResponseContent.isBlank()) {
                 aiResponseContent = getLocalIntelligentResponse(prompt)
             }
@@ -175,7 +239,7 @@ class AiRepositoryImpl @Inject constructor(
 
         // 1. Try OpenRouter Streaming
         val openRouterKeys = mutableListOf<String>()
-        if (apiKey.isNotBlank() && !apiKey.startsWith("gsk_")) openRouterKeys.add(apiKey)
+        if (apiKey.isNotBlank() && !apiKey.startsWith("gsk_") && !apiKey.startsWith("zen_")) openRouterKeys.add(apiKey)
         if (com.igent.mobile.BuildConfig.OPENROUTER_API_KEY_1.isNotBlank()) openRouterKeys.add(com.igent.mobile.BuildConfig.OPENROUTER_API_KEY_1)
         openRouterKeys.add("sk-or-v1-placeholder")
 
@@ -257,7 +321,49 @@ class AiRepositoryImpl @Inject constructor(
             }
         }
 
-        // 3. Fallback to Pollinations AI non-streaming chunk if streaming failed
+        // 3. Try Zen AI Streaming if previous streaming failed
+        if (!streamed) {
+            val zenKeys = mutableListOf<String>()
+            if (apiKey.isNotBlank() && (apiKey.startsWith("zen_") || apiKey.length > 20)) zenKeys.add(apiKey)
+            zenKeys.add("zen-placeholder-key")
+
+            outer@for (key in zenKeys.distinct()) {
+                val authHeader = "Bearer $key"
+                for (modelName in zenModels) {
+                    try {
+                        val request = ChatRequest(model = modelName, messages = messagesList, stream = true)
+                        val response = zenApiService.createChatCompletionStream(authorization = authHeader, request = request)
+                        if (response.isSuccessful) {
+                            response.body()?.byteStream()?.bufferedReader()?.use { reader ->
+                                var line = reader.readLine()
+                                while (line != null) {
+                                    if (line.startsWith("data: ")) {
+                                        val jsonStr = line.removePrefix("data: ").trim()
+                                        if (jsonStr == "[DONE]") break
+                                        try {
+                                            val chatResponse = json.decodeFromString<ChatResponse>(jsonStr)
+                                            val content = chatResponse.choices?.firstOrNull()?.delta?.content
+                                            if (!content.isNullOrEmpty()) {
+                                                emit(content)
+                                                streamed = true
+                                            }
+                                        } catch (e: Exception) {
+                                            // Skip
+                                        }
+                                    }
+                                    line = reader.readLine()
+                                }
+                            }
+                            if (streamed) break@outer
+                        }
+                    } catch (e: Exception) {
+                        // Continue
+                    }
+                }
+            }
+        }
+
+        // 4. Fallback to Pollinations AI non-streaming chunk if streaming failed
         if (!streamed) {
             try {
                 val content = callPollinationsAi(messagesList)

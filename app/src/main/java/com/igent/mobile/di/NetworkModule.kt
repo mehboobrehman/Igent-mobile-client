@@ -5,6 +5,7 @@ import com.igent.mobile.data.remote.AuthInterceptor
 import com.igent.mobile.data.remote.SessionManager
 import com.igent.mobile.data.remote.ai.GroqApiService
 import com.igent.mobile.data.remote.ai.OpenRouterApiService
+import com.igent.mobile.data.remote.ai.ZenApiService
 import com.igent.mobile.data.remote.rss.RssApiService
 import com.igent.mobile.data.remote.rss.RssParser
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
@@ -26,6 +27,9 @@ annotation class OpenRouterRetrofit
 
 @Qualifier
 annotation class GroqRetrofit
+
+@Qualifier
+annotation class ZenRetrofit
 
 @Qualifier
 annotation class RssRetrofit
@@ -99,6 +103,21 @@ object NetworkModule {
 
     @Provides
     @Singleton
+    @ZenRetrofit
+    fun provideZenRetrofit(
+        okHttpClient: OkHttpClient,
+        json: Json
+    ): Retrofit {
+        val contentType = "application/json".toMediaType()
+        return Retrofit.Builder()
+            .baseUrl("https://api.zenai.network/") // Standard OpenAI-compatible Zen AI endpoint
+            .client(okHttpClient)
+            .addConverterFactory(json.asConverterFactory(contentType))
+            .build()
+    }
+
+    @Provides
+    @Singleton
     @RssRetrofit
     fun provideRssRetrofit(
         okHttpClient: OkHttpClient
@@ -153,6 +172,14 @@ object NetworkModule {
         @GroqRetrofit retrofit: Retrofit
     ): GroqApiService {
         return retrofit.create(GroqApiService::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideZenApiService(
+        @ZenRetrofit retrofit: Retrofit
+    ): ZenApiService {
+        return retrofit.create(ZenApiService::class.java)
     }
 
     @Provides
