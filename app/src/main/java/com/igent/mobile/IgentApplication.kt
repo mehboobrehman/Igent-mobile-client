@@ -7,6 +7,7 @@ import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import com.igent.mobile.util.GlobalCrashCatcher
 import com.igent.mobile.worker.BackgroundSyncWorker
 import com.igent.mobile.worker.DailyAgentWorker
 import dagger.hilt.android.HiltAndroidApp
@@ -21,6 +22,7 @@ class IgentApplication : Application(), androidx.work.Configuration.Provider {
 
     override fun onCreate() {
         super.onCreate()
+        GlobalCrashCatcher.install(this)
         scheduleBackgroundSync()
         scheduleDailyAgent()
     }

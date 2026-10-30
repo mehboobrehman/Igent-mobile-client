@@ -14,6 +14,9 @@ interface LogDao {
     @Query("SELECT * FROM agent_logs ORDER BY timestamp DESC LIMIT 50")
     fun getLast50Logs(): Flow<List<LogEntity>>
 
+    @Query("SELECT * FROM agent_logs ORDER BY timestamp DESC LIMIT 200")
+    fun getLast200Logs(): Flow<List<LogEntity>>
+
     @Query("DELETE FROM agent_logs")
     suspend fun clearAll()
 

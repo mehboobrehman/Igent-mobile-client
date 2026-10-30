@@ -1,0 +1,21 @@
+{
+  "name": "igent-telemetry-server",
+  "version": "1.0.0",
+  "description": "Standalone Node.js telemetry and remote config server for Igent mobile client",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  },
+  "keywords": [
+    "telemetry",
+    "igent",
+    "remote-config",
+    "express"
+  ],
+  "author": "",
+  "license": "MIT"
+}
