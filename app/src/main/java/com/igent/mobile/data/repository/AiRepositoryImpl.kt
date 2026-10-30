@@ -11,6 +11,8 @@ import com.igent.mobile.data.remote.ai.ChatResponse
 import com.igent.mobile.data.remote.ai.GroqApiService
 import com.igent.mobile.data.remote.ai.OpenRouterApiService
 import com.igent.mobile.data.remote.ai.ZenApiService
+import com.igent.mobile.data.remote.ai.ZenAiProviderHandler
+import com.igent.mobile.domain.service.MarketDataContextBuilder
 import com.igent.mobile.data.util.KeyObfuscator
 import com.igent.mobile.domain.model.Message
 import com.igent.mobile.domain.repository.AiRepository
@@ -37,6 +39,8 @@ class AiRepositoryImpl @Inject constructor(
     private val openRouterApiService: OpenRouterApiService,
     private val groqApiService: GroqApiService,
     private val zenApiService: ZenApiService,
+    private val zenAiProviderHandler: ZenAiProviderHandler,
+    private val marketDataContextBuilder: MarketDataContextBuilder,
     private val preferencesDataSource: PreferencesDataSource,
     private val okHttpClient: OkHttpClient,
     private val json: Json
@@ -74,31 +78,8 @@ class AiRepositoryImpl @Inject constructor(
             )
             messageDao.insertMessage(MessageEntity.fromDomain(userMessage))
 
-            // Fetch live PSX stock quotes and market data from local cache (StockDao)
-            val stocks = try {
-                stockDao.getAllStocks().first()
-            } catch (e: Exception) {
-                emptyList()
-            }
-
-            val marketDataContext = buildString {
-                appendLine("=== LIVE PSX MARKET DATA CONTEXT ===")
-                if (stocks.isNotEmpty()) {
-                    appendLine("Current cached stock quotes (${stocks.size} stocks):")
-                    stocks.forEach { stock ->
-                        val sign = if (stock.change >= 0) "+" else ""
-                        appendLine("- ${stock.symbol} (${stock.name}): Price = ${stock.price} PKR, Change = $sign${stock.change} (${sign}${stock.percentChange}%), High = ${stock.high}, Low = ${stock.low}, Volume = ${stock.volume}")
-                    }
-                } else {
-                    appendLine("No cached stock quotes currently available. Please advise based on general PSX market conditions.")
-                }
-                appendLine("=====================================")
-            }
-
-            val systemMessage = ChatMessage(
-                role = "system",
-                content = "You are Igent, an expert financial advisor and Pakistan Stock Exchange (PSX) market assistant. You have access to real-time cached market quotes and data. Always incorporate these live market quotes and prices into your answers when discussing stocks or market conditions.\n\n$marketDataContext"
-            )
+            // Build live market data system message via MarketDataContextBuilder
+            val systemMessage = marketDataContextBuilder.buildSystemMessageWithMarketData()
 
             val history = try {
                 messageDao.getAllMessages().first().takeLast(10).map { entity ->

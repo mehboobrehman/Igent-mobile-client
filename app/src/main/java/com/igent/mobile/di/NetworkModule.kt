@@ -1,5 +1,7 @@
 package com.igent.mobile.di
 
+import com.igent.mobile.data.remote.config.ConfigApiService
+import com.igent.mobile.data.remote.telemetry.TelemetryInterceptor
 import com.igent.mobile.data.preferences.PreferencesDataSource
 import com.igent.mobile.data.remote.AuthInterceptor
 import com.igent.mobile.data.remote.SessionManager
@@ -57,7 +59,8 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideOkHttpClient(
-        authInterceptor: AuthInterceptor
+        authInterceptor: AuthInterceptor,
+        telemetryInterceptor: TelemetryInterceptor
     ): OkHttpClient {
         val logging = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
@@ -67,6 +70,7 @@ object NetworkModule {
             .readTimeout(60, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
             .addInterceptor(authInterceptor)
+            .addInterceptor(telemetryInterceptor)
             .addInterceptor(logging)
             .build()
     }
@@ -210,5 +214,11 @@ object NetworkModule {
     @Singleton
     fun provideRssParser(): RssParser {
         return RssParser()
+    }
+
+    @Provides
+    @Singleton
+    fun provideConfigApiService(@PsxFallbackRetrofit retrofit: Retrofit): ConfigApiService {
+        return retrofit.create(ConfigApiService::class.java)
     }
 }

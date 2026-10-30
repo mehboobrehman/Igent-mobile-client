@@ -9,6 +9,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.clickable
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -23,7 +24,9 @@ import com.igent.mobile.ui.analysis.FinancialAnalysisScreen
 import com.igent.mobile.ui.psx.PsxScreen
 import com.igent.mobile.ui.rss.RssScreen
 import com.igent.mobile.ui.idea.IdeaCardsScreen
+import com.igent.mobile.ui.learning.LearningScreen
 import com.igent.mobile.ui.settings.NotificationSettingsScreen
+import com.igent.mobile.ui.debug.DebugScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -74,6 +77,7 @@ fun IgentAppShell(initialTargetScreen: String? = null) {
                         Triple(Screen.Stocks, "Stocks", Icons.Default.TrendingUp),
                         Triple(Screen.Analysis, "Audit", Icons.Default.Analytics),
                         Triple(Screen.IdeaCards, "Ideas", Icons.Default.Lightbulb),
+                        Triple(Screen.Learning, "Academy", Icons.Default.School),
                         Triple(Screen.Rss, "RSS", Icons.Default.RssFeed),
                         Triple(Screen.Settings, "Settings", Icons.Default.Settings)
                     )
@@ -122,6 +126,7 @@ fun IgentAppShell(initialTargetScreen: String? = null) {
             composable(Screen.Stocks.route) { PsxScreen() }
             composable(Screen.Analysis.route) { FinancialAnalysisScreen() }
             composable(Screen.IdeaCards.route) { IdeaCardsScreen() }
+            composable(Screen.Learning.route) { LearningScreen() }
             composable(Screen.Rss.route) { RssScreen() }
             composable(Screen.Settings.route) {
                 SettingsHubScreen(
@@ -130,11 +135,17 @@ fun IgentAppShell(initialTargetScreen: String? = null) {
                     },
                     onNavigateToAuth = {
                         navController.navigate(Screen.Auth.route)
+                    },
+                    onNavigateToDebug = {
+                        navController.navigate(Screen.Debug.route)
                     }
                 )
             }
             composable(Screen.NotificationSettings.route) {
                 NotificationSettingsScreen()
+            }
+            composable(Screen.Debug.route) {
+                DebugScreen(onNavigateBack = { navController.popBackStack() })
             }
         }
     }
@@ -144,8 +155,12 @@ fun IgentAppShell(initialTargetScreen: String? = null) {
 @Composable
 fun SettingsHubScreen(
     onNavigateToNotificationSettings: () -> Unit,
-    onNavigateToAuth: () -> Unit
+    onNavigateToAuth: () -> Unit,
+    onNavigateToDebug: () -> Unit
 ) {
+    var tapCount by remember { mutableStateOf(0) }
+    var lastTapTime by remember { mutableStateOf(0L) }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -238,6 +253,34 @@ fun SettingsHubScreen(
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+            }
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "Version 1.0.0", // Hardcoded or fetch from BuildConfig
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.clickable {
+                        val currentTime = System.currentTimeMillis()
+                        if (currentTime - lastTapTime < 500) {
+                            tapCount++
+                        } else {
+                            tapCount = 1
+                        }
+                        lastTapTime = currentTime
+                        if (tapCount >= 3) {
+                            onNavigateToDebug()
+                            tapCount = 0
+                        }
+                    }
+                )
             }
         }
     }

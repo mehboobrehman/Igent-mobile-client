@@ -24,6 +24,7 @@ class PreferencesDataSource @Inject constructor(
         val STOCK_ALERTS_ENABLED = booleanPreferencesKey("stock_alerts_enabled")
         val RSS_ALERTS_ENABLED = booleanPreferencesKey("rss_alerts_enabled")
         val PLACEHOLDER_CREDENTIALS = stringPreferencesKey("placeholder_credentials")
+        val SELECTED_AI_PROVIDER = stringPreferencesKey("selected_ai_provider")
     }
 
     val apiKey: Flow<String> = context.dataStore.data
@@ -66,6 +67,11 @@ class PreferencesDataSource @Inject constructor(
             preferences[PreferencesKeys.PLACEHOLDER_CREDENTIALS] ?: ""
         }
 
+    val selectedAiProvider: Flow<String> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.SELECTED_AI_PROVIDER] ?: "openrouter"
+        }
+
     suspend fun saveApiKey(key: String) {
         val obfuscated = com.igent.mobile.data.util.KeyObfuscator.obfuscate(key)
         context.dataStore.edit { preferences ->
@@ -100,6 +106,12 @@ class PreferencesDataSource @Inject constructor(
     suspend fun savePlaceholderCredentials(credentials: String) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.PLACEHOLDER_CREDENTIALS] = credentials
+        }
+    }
+
+    suspend fun saveSelectedAiProvider(providerId: String) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.SELECTED_AI_PROVIDER] = providerId
         }
     }
 }

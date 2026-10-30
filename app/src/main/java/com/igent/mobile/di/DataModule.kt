@@ -3,6 +3,8 @@ package com.igent.mobile.di
 import android.content.Context
 import androidx.room.Room
 import com.igent.mobile.data.local.IgentDatabase
+import com.igent.mobile.data.local.dao.LogDao
+import com.igent.mobile.data.local.dao.CourseDao
 import com.igent.mobile.data.local.dao.FeedItemDao
 import com.igent.mobile.data.local.dao.IdeaCardDao
 import com.igent.mobile.data.local.dao.MessageDao
@@ -12,9 +14,17 @@ import com.igent.mobile.data.preferences.PreferencesDataSource
 import com.igent.mobile.data.repository.AiRepositoryImpl
 import com.igent.mobile.data.repository.PsxRepositoryImpl
 import com.igent.mobile.data.repository.RssRepositoryImpl
+import com.igent.mobile.data.repository.LearningRepositoryImpl
+import com.igent.mobile.domain.repository.LearningRepository
 import com.igent.mobile.domain.repository.AiRepository
 import com.igent.mobile.domain.repository.PsxRepository
 import com.igent.mobile.domain.repository.RssRepository
+import com.igent.mobile.data.repository.IdeaCardRepositoryImpl
+import com.igent.mobile.data.repository.WeeklySummaryRepositoryImpl
+import com.igent.mobile.data.service.MarketDataContextBuilderImpl
+import com.igent.mobile.domain.repository.IdeaCardRepository
+import com.igent.mobile.domain.repository.WeeklySummaryRepository
+import com.igent.mobile.domain.service.MarketDataContextBuilder
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -68,6 +78,18 @@ object DatabaseModule {
     fun provideWeeklySummaryDao(database: IgentDatabase): WeeklySummaryDao {
         return database.weeklySummaryDao()
     }
+
+    @Provides
+    @Singleton
+    fun provideCourseDao(database: IgentDatabase): CourseDao {
+        return database.courseDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideLogDao(database: IgentDatabase): LogDao {
+        return database.logDao()
+    }
 }
 
 @Module
@@ -104,4 +126,28 @@ abstract class RepositoryModule {
     abstract fun bindRssRepository(
         rssRepositoryImpl: RssRepositoryImpl
     ): RssRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindLearningRepository(
+        learningRepositoryImpl: LearningRepositoryImpl
+    ): LearningRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindMarketDataContextBuilder(
+        marketDataContextBuilderImpl: MarketDataContextBuilderImpl
+    ): MarketDataContextBuilder
+
+    @Binds
+    @Singleton
+    abstract fun bindIdeaCardRepository(
+        ideaCardRepositoryImpl: IdeaCardRepositoryImpl
+    ): IdeaCardRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindWeeklySummaryRepository(
+        weeklySummaryRepositoryImpl: WeeklySummaryRepositoryImpl
+    ): WeeklySummaryRepository
 }
