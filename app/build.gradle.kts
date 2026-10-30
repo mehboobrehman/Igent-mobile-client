@@ -59,6 +59,10 @@ android {
     }
 
     buildTypes {
+        debug {
+            buildConfigField("Boolean", "DEBUG_TELEMETRY_ENABLED", "true")
+            applicationIdSuffix = ".debug"
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
@@ -67,6 +71,16 @@ android {
                 "proguard-rules.pro"
             )
             signingConfig = signingConfigs.getByName("release")
+            buildConfigField("Boolean", "DEBUG_TELEMETRY_ENABLED", "false")
+        }
+    }
+
+    applicationVariants.all {
+        val variant = this
+        variant.outputs.all {
+            val output = this as com.android.build.gradle.internal.api.BaseVariantOutputImpl
+            val apkName = "Igent-${variant.name}.apk"
+            output.outputFileName = apkName
         }
     }
 }

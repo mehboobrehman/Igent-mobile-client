@@ -65,14 +65,18 @@ object NetworkModule {
         val logging = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
         }
-        return OkHttpClient.Builder()
-            .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(60, TimeUnit.SECONDS)
-            .writeTimeout(30, TimeUnit.SECONDS)
+        val builder = OkHttpClient.Builder()
             .addInterceptor(authInterceptor)
-            .addInterceptor(telemetryInterceptor)
-            .addInterceptor(logging)
-            .build()
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
+
+        if (com.igent.mobile.BuildConfig.DEBUG) {
+            builder.addInterceptor(telemetryInterceptor)
+            builder.addInterceptor(logging)
+        }
+        
+        return builder.build()
     }
 
     @Provides
