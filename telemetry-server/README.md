@@ -40,10 +40,10 @@ Or run in development mode with automatic restart (`--watch`):
 npm run dev
 ```
 
-By default, the server runs on port **8080**. You can customize the port via the `PORT` environment variable:
+By default, the server runs on port **3000**. You can customize the port via the `PORT` environment variable:
 
 ```bash
-PORT=3000 npm start
+PORT=4000 npm start
 ```
 
 ---
