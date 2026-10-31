@@ -23,6 +23,6 @@ interface LogDao {
     @Query("UPDATE agent_logs SET isSynced = 1 WHERE id IN (:ids)")
     suspend fun markAsSynced(ids: List<Long>)
 
-    @Query("SELECT * FROM agent_logs WHERE isSynced = 0")
+    @Query("SELECT * FROM agent_logs WHERE isSynced = 0 ORDER BY timestamp ASC LIMIT 100")
     suspend fun getUnsyncedLogs(): List<LogEntity>
 }

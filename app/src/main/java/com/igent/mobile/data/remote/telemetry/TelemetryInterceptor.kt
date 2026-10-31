@@ -15,6 +15,12 @@ class TelemetryInterceptor @Inject constructor(
 
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
+        
+        // Avoid infinite loop if this is a request to the telemetry sync endpoint
+        if (request.url.encodedPath.contains("telemetry")) {
+            return chain.proceed(request)
+        }
+        
         val tag = "NetworkTelemetry"
         
         val requestBodyString = request.body?.let { body ->

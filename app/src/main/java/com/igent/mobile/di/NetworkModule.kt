@@ -15,6 +15,7 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import kotlinx.coroutines.flow.first
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -174,7 +175,7 @@ object NetworkModule {
     @Named("TelemetryBaseUrl")
     fun provideTelemetryBaseUrl(preferencesDataSource: PreferencesDataSource): String {
         return kotlinx.coroutines.runBlocking {
-            kotlinx.coroutines.flow.first(preferencesDataSource.telemetryBaseUrl)
+            preferencesDataSource.telemetryBaseUrl.first()
         }
     }
 

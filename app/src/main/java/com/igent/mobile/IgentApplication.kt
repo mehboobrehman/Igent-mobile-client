@@ -21,8 +21,6 @@ class IgentApplication : Application(), androidx.work.Configuration.Provider {
     @Inject
     lateinit var workerFactory: HiltWorkerFactory
 
-import com.igent.mobile.worker.TelemetrySyncWorker
-// ...
     override fun onCreate() {
         super.onCreate()
         GlobalCrashCatcher.install(this)

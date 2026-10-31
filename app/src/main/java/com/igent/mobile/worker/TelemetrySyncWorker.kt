@@ -3,7 +3,12 @@ package com.igent.mobile.worker
 import android.content.Context
 import android.util.Log
 import androidx.hilt.work.HiltWorker
+import androidx.work.Constraints
 import androidx.work.CoroutineWorker
+import androidx.work.ExistingWorkPolicy
+import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.igent.mobile.data.local.dao.LogDao
 import com.igent.mobile.data.remote.telemetry.TelemetryApiService
@@ -29,21 +34,50 @@ class TelemetrySyncWorker @AssistedInject constructor(
                 return Result.success()
             }
 
-            val syncedIds = mutableListOf<Long>()
-            for (log in unsyncedLogs) {
-                val dto = TelemetryLogDto(
+            Log.d(TAG, "Found ${unsyncedLogs.size} unsynced logs")
+
+            val dtos = unsyncedLogs.map { log ->
+                TelemetryLogDto(
                     timestamp = log.timestamp,
                     level = log.level,
                     message = log.message,
                     tag = log.tag
                 )
-                
-                val response = telemetryApiService.postLog(dto)
-                if (response.isSuccessful) {
-                    syncedIds.add(log.id)
+            }
+
+            // Try batch upload first
+            var batchSuccess = false
+            try {
+                val batchResponse = telemetryApiService.postLogBatch(dtos)
+                if (batchResponse.isSuccessful) {
+                    batchSuccess = true
                 } else {
-                    Log.w(TAG, "Failed to sync log ${log.id}: ${response.errorBody()?.string()}")
-                    // Optionally break or continue; for now, continue to try others
+                    Log.w(TAG, "Batch log sync failed: ${batchResponse.code()} ${batchResponse.errorBody()?.string()}")
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Batch log sync endpoint unavailable or failed, falling back to individual sync: ${e.message}")
+            }
+
+            val syncedIds = mutableListOf<Long>()
+
+            if (batchSuccess) {
+                syncedIds.addAll(unsyncedLogs.map { it.id })
+            } else {
+                // Fallback to individual log sync
+                for (log in unsyncedLogs) {
+                    val dto = TelemetryLogDto(
+                        timestamp = log.timestamp,
+                        level = log.level,
+                        message = log.message,
+                        tag = log.tag
+                    )
+                    
+                    val response = telemetryApiService.postLog(dto)
+                    if (response.isSuccessful) {
+                        syncedIds.add(log.id)
+                    } else {
+                        Log.w(TAG, "Failed to sync log ${log.id}: ${response.errorBody()?.string()}")
+                    }
                 }
             }
 
@@ -66,5 +100,22 @@ class TelemetrySyncWorker @AssistedInject constructor(
     companion object {
         private const val TAG = "TelemetrySyncWorker"
         const val WORK_NAME = "com.igent.mobile.worker.TelemetrySyncWorker"
+        const val ONE_TIME_WORK_NAME = "com.igent.mobile.worker.TelemetrySyncWorker.OneTime"
+
+        fun enqueueOneTimeSync(context: Context) {
+            val constraints = Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build()
+
+            val syncWorkRequest = OneTimeWorkRequestBuilder<TelemetrySyncWorker>()
+                .setConstraints(constraints)
+                .build()
+
+            WorkManager.getInstance(context.applicationContext).enqueueUniqueWork(
+                ONE_TIME_WORK_NAME,
+                ExistingWorkPolicy.REPLACE,
+                syncWorkRequest
+            )
+        }
     }
 }

@@ -37,6 +37,8 @@ class GlobalCrashCatcher private constructor(
                             message = message.take(4000) // limit length if needed
                         )
                     )
+                    // Trigger sync attempt before termination
+                    com.igent.mobile.worker.TelemetrySyncWorker.enqueueOneTimeSync(context)
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }
