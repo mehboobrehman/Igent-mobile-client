@@ -25,6 +25,7 @@ class PreferencesDataSource @Inject constructor(
         val RSS_ALERTS_ENABLED = booleanPreferencesKey("rss_alerts_enabled")
         val PLACEHOLDER_CREDENTIALS = stringPreferencesKey("placeholder_credentials")
         val SELECTED_AI_PROVIDER = stringPreferencesKey("selected_ai_provider")
+        val TELEMETRY_BASE_URL = stringPreferencesKey("telemetry_base_url")
     }
 
     val apiKey: Flow<String> = context.dataStore.data
@@ -72,6 +73,11 @@ class PreferencesDataSource @Inject constructor(
             preferences[PreferencesKeys.SELECTED_AI_PROVIDER] ?: "openrouter"
         }
 
+    val telemetryBaseUrl: Flow<String> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.TELEMETRY_BASE_URL] ?: "http://10.0.2.2:3000/"
+        }
+
     suspend fun saveApiKey(key: String) {
         val obfuscated = com.igent.mobile.data.util.KeyObfuscator.obfuscate(key)
         context.dataStore.edit { preferences ->
@@ -112,6 +118,12 @@ class PreferencesDataSource @Inject constructor(
     suspend fun saveSelectedAiProvider(providerId: String) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.SELECTED_AI_PROVIDER] = providerId
+        }
+    }
+
+    suspend fun saveTelemetryBaseUrl(url: String) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.TELEMETRY_BASE_URL] = url
         }
     }
 }

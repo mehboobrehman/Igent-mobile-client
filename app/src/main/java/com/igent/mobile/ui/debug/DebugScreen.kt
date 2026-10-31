@@ -35,6 +35,11 @@ fun DebugScreen(
     val config by viewModel.config.collectAsState()
     val selectedLevel by viewModel.selectedLevel.collectAsState()
     val networkStats by viewModel.networkStats.collectAsState()
+    val telemetryBaseUrl by viewModel.telemetryBaseUrl.collectAsState()
+    var tempUrl by remember { mutableStateOf(telemetryBaseUrl) }
+    LaunchedEffect(telemetryBaseUrl) {
+        tempUrl = telemetryBaseUrl
+    }
     val context = LocalContext.current
 
     Scaffold(
@@ -96,6 +101,23 @@ fun DebugScreen(
                         Text("Avg Latency: ${networkStats.averageLatencyMs}ms")
                     }
                 }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Telemetry URL Configuration
+            OutlinedTextField(
+                value = tempUrl,
+                onValueChange = { tempUrl = it },
+                label = { Text("Telemetry Server URL") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+            Button(
+                onClick = { viewModel.saveTelemetryBaseUrl(tempUrl) },
+                modifier = Modifier.padding(top = 8.dp)
+            ) {
+                Text("Save")
             }
 
             Spacer(modifier = Modifier.height(12.dp))

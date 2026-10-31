@@ -172,7 +172,11 @@ object NetworkModule {
 
     @Provides
     @Named("TelemetryBaseUrl")
-    fun provideTelemetryBaseUrl(): String = "http://10.0.2.2:3000/"
+    fun provideTelemetryBaseUrl(preferencesDataSource: PreferencesDataSource): String {
+        return kotlinx.coroutines.runBlocking {
+            kotlinx.coroutines.flow.first(preferencesDataSource.telemetryBaseUrl)
+        }
+    }
 
     @Provides
     @Singleton

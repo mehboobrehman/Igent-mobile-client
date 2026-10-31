@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.igent.mobile.data.local.dao.LogDao
 import com.igent.mobile.data.local.entity.LogEntity
+import com.igent.mobile.data.preferences.PreferencesDataSource
 import com.igent.mobile.data.remote.config.ConfigRepository
 import com.igent.mobile.data.remote.config.RemoteConfig
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -20,7 +21,8 @@ data class NetworkStats(
 @HiltViewModel
 class DebugViewModel @Inject constructor(
     private val logDao: LogDao,
-    private val configRepository: ConfigRepository
+    private val configRepository: ConfigRepository,
+    private val preferencesDataSource: PreferencesDataSource
 ) : ViewModel() {
 
     private val _selectedLevel = MutableStateFlow<String>("ALL")
@@ -38,6 +40,9 @@ class DebugViewModel @Inject constructor(
     }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     val config: StateFlow<RemoteConfig> = configRepository.config
+
+    val telemetryBaseUrl: StateFlow<String> = preferencesDataSource.telemetryBaseUrl
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "http://10.0.2.2:3000/")
 
     val networkStats: StateFlow<NetworkStats> = allLogs.map { logList ->
         val networkLogs = logList.filter { it.tag == "NetworkTelemetry" }
@@ -61,6 +66,12 @@ class DebugViewModel @Inject constructor(
 
     fun setLevelFilter(level: String) {
         _selectedLevel.value = level
+    }
+
+    fun saveTelemetryBaseUrl(url: String) {
+        viewModelScope.launch {
+            preferencesDataSource.saveTelemetryBaseUrl(url)
+        }
     }
 
     fun clearLogs() {
