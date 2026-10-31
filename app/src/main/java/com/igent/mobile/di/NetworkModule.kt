@@ -21,6 +21,7 @@ import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import java.util.concurrent.TimeUnit
+import javax.inject.Named
 import javax.inject.Qualifier
 import javax.inject.Singleton
 
@@ -35,6 +36,9 @@ annotation class ZenRetrofit
 
 @Qualifier
 annotation class RssRetrofit
+
+@Qualifier
+annotation class TelemetryRetrofit
 
 @Qualifier
 annotation class PsxPrimaryRetrofit
@@ -164,6 +168,34 @@ object NetworkModule {
             .client(okHttpClient)
             .addConverterFactory(json.asConverterFactory(contentType))
             .build()
+    }
+
+    @Provides
+    @Named("TelemetryBaseUrl")
+    fun provideTelemetryBaseUrl(): String = "http://10.0.2.2:3000/"
+
+    @Provides
+    @Singleton
+    @TelemetryRetrofit
+    fun provideTelemetryRetrofit(
+        @Named("TelemetryBaseUrl") baseUrl: String,
+        okHttpClient: OkHttpClient,
+        json: Json
+    ): Retrofit {
+        val contentType = "application/json".toMediaType()
+        return Retrofit.Builder()
+            .baseUrl(baseUrl)
+            .client(okHttpClient)
+            .addConverterFactory(json.asConverterFactory(contentType))
+            .build()
+    }
+
+    @Provides
+    @Singleton
+    fun provideTelemetryApiService(
+        @TelemetryRetrofit retrofit: Retrofit
+    ): com.igent.mobile.data.remote.telemetry.TelemetryApiService {
+        return retrofit.create(com.igent.mobile.data.remote.telemetry.TelemetryApiService::class.java)
     }
 
     @Provides
