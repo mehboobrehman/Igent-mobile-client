@@ -10,6 +10,7 @@ import androidx.work.WorkManager
 import com.igent.mobile.util.GlobalCrashCatcher
 import com.igent.mobile.worker.BackgroundSyncWorker
 import com.igent.mobile.worker.DailyAgentWorker
+import com.igent.mobile.worker.TelemetrySyncWorker
 import dagger.hilt.android.HiltAndroidApp
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -20,11 +21,33 @@ class IgentApplication : Application(), androidx.work.Configuration.Provider {
     @Inject
     lateinit var workerFactory: HiltWorkerFactory
 
+import com.igent.mobile.worker.TelemetrySyncWorker
+// ...
     override fun onCreate() {
         super.onCreate()
         GlobalCrashCatcher.install(this)
         scheduleBackgroundSync()
         scheduleDailyAgent()
+        scheduleTelemetrySync()
+    }
+// ...
+    private fun scheduleTelemetrySync() {
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+
+        val syncWorkRequest = PeriodicWorkRequestBuilder<TelemetrySyncWorker>(
+            repeatInterval = 1,
+            repeatIntervalTimeUnit = TimeUnit.HOURS
+        )
+            .setConstraints(constraints)
+            .build()
+
+        WorkManager.getInstance(applicationContext).enqueueUniquePeriodicWork(
+            TelemetrySyncWorker.WORK_NAME,
+            ExistingPeriodicWorkPolicy.KEEP,
+            syncWorkRequest
+        )
     }
 
     override val workManagerConfiguration: androidx.work.Configuration
