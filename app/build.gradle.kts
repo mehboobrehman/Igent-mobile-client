@@ -23,8 +23,8 @@ android {
         applicationId = "com.igent.mobile"
         minSdk = 26
         targetSdk = 34
-        versionCode = 16
-        versionName = "1.0.16"
+        versionCode = 17
+        versionName = "1.0.17"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -79,8 +79,7 @@ android {
         val variant = this
         variant.outputs.all {
             val output = this as com.android.build.gradle.internal.api.BaseVariantOutputImpl
-            val apkName = "Igent-${variant.name}.apk"
-            output.outputFileName = apkName
+            output.outputFileName = "Igent-${variant.name}.apk"
         }
     }
 }
