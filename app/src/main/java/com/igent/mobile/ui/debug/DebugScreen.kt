@@ -106,18 +106,38 @@ fun DebugScreen(
             Spacer(modifier = Modifier.height(12.dp))
 
             // Telemetry URL Configuration
-            OutlinedTextField(
-                value = tempUrl,
-                onValueChange = { tempUrl = it },
-                label = { Text("Telemetry Server URL") },
+            Card(
                 modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
-            Button(
-                onClick = { viewModel.saveTelemetryBaseUrl(tempUrl) },
-                modifier = Modifier.padding(top = 8.dp)
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
             ) {
-                Text("Save")
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text(
+                        text = "Telemetry Server URL",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Configure base URL for telemetry log synchronization",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = tempUrl,
+                        onValueChange = { tempUrl = it },
+                        label = { Text("Server URL") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Button(
+                        onClick = { viewModel.saveTelemetryBaseUrl(tempUrl) },
+                        modifier = Modifier.align(Alignment.End)
+                    ) {
+                        Text("Save URL")
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(12.dp))
