@@ -13,10 +13,17 @@ class TelemetryInterceptor @Inject constructor(
     private val logger: AgentLogger
 ) : Interceptor {
 
+    private val sensitiveHeaderKeys = setOf(
+        "authorization", "cookie", "set-cookie", "x-api-key", "api-key", "token", "secret", "password", "credential"
+    )
+
+    private val sensitiveBodyKeys = listOf(
+        "password", "token", "secret", "authorization", "creditCard", "cardNumber", "cvv", "pin", "ssn", "api_key", "apiKey", "key"
+    )
+
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
         
-        // Avoid infinite loop if this is a request to the telemetry sync endpoint
         if (request.url.encodedPath.contains("telemetry")) {
             return chain.proceed(request)
         }
@@ -27,7 +34,7 @@ class TelemetryInterceptor @Inject constructor(
             try {
                 val buffer = Buffer()
                 body.writeTo(buffer)
-                buffer.readUtf8()
+                redactBodyString(buffer.readUtf8())
             } catch (e: Exception) {
                 "[Could not read request body: ${e.message}]"
             }
@@ -64,9 +71,10 @@ class TelemetryInterceptor @Inject constructor(
 
         val responseBody = response.body
         val source = responseBody?.source()
-        source?.request(Long.MAX_VALUE) // Buffer the entire body
+        source?.request(Long.MAX_VALUE)
         val buffer = source?.buffer
-        val responseBodyString = buffer?.clone()?.readUtf8() ?: ""
+        val rawResponseBodyString = buffer?.clone()?.readUtf8() ?: ""
+        val responseBodyString = redactBodyString(rawResponseBodyString)
         val contentLength = responseBody?.contentLength() ?: -1L
 
         val responseInfo = buildString {
@@ -84,5 +92,14 @@ class TelemetryInterceptor @Inject constructor(
         }
 
         return response
+    }
+
+    private fun redactBodyString(body: String): String {
+        var result = body
+        for (key in sensitiveBodyKeys) {
+            val regex = Regex("(\"$key\"\\s*:\\s*\")([^\"]*)(\")", RegexOption.IGNORE_CASE)
+            result = regex.replace(result, "$1[REDACTED]$3")
+        }
+        return result
     }
 }

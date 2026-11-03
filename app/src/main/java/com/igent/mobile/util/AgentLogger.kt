@@ -9,7 +9,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -26,12 +25,16 @@ class AgentLogger @Inject constructor(
         const val BATCH_SIZE = 20
     }
 
-    fun d(tag: String, message: String) = log("DEBUG", tag, message)
-    fun i(tag: String, message: String) = log("INFO", tag, message)
-    fun w(tag: String, message: String) = log("WARN", tag, message)
-    fun e(tag: String, message: String, throwable: Throwable? = null) {
+    fun d(tag: String, message: String, correlationId: String? = null) = log("DEBUG", tag, message, correlationId)
+    fun i(tag: String, message: String, correlationId: String? = null) = log("INFO", tag, message, correlationId)
+    fun w(tag: String, message: String, correlationId: String? = null) = log("WARN", tag, message, correlationId)
+    fun e(tag: String, message: String, throwable: Throwable? = null, correlationId: String? = null) {
         val msg = if (throwable != null) "$message: ${throwable.localizedMessage}" else message
-        log("ERROR", tag, msg, immediateSync = true)
+        log("ERROR", tag, msg, correlationId, immediateSync = true)
+    }
+    fun fatal(tag: String, message: String, throwable: Throwable? = null, correlationId: String? = null) {
+        val msg = if (throwable != null) "$message: ${throwable.localizedMessage}" else message
+        log("FATAL", tag, msg, correlationId, immediateSync = true)
     }
 
     fun triggerSync() {
@@ -42,28 +45,6 @@ class AgentLogger @Inject constructor(
         }
     }
 
-    fun logSync(level: String, tag: String, message: String) {
-        runBlocking(Dispatchers.IO) {
-            try {
-                logDao.insert(
-                    LogEntity(
-                        level = level,
-                        tag = tag,
-                        message = message
-                    )
-                )
-                if (level == "ERROR" || level == "FATAL") {
-                    triggerSync()
-                } else {
-                    checkBatchAndTriggerSync()
-                }
-            } catch (e: Exception) {
-                // Fallback if DB is unavailable during crash
-                e.printStackTrace()
-            }
-        }
-    }
-
     private fun checkBatchAndTriggerSync() {
         if (logCounter.incrementAndGet() >= BATCH_SIZE) {
             logCounter.set(0)
@@ -71,14 +52,15 @@ class AgentLogger @Inject constructor(
         }
     }
 
-    private fun log(level: String, tag: String, message: String, immediateSync: Boolean = false) {
+    private fun log(level: String, tag: String, message: String, correlationId: String? = null, immediateSync: Boolean = false) {
         scope.launch {
             try {
+                val formattedMessage = if (correlationId != null) "[$correlationId] $message" else message
                 logDao.insert(
                     LogEntity(
                         level = level,
                         tag = tag,
-                        message = message
+                        message = formattedMessage
                     )
                 )
                 if (immediateSync || level == "ERROR" || level == "FATAL") {

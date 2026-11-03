@@ -8,6 +8,8 @@ import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.igent.mobile.util.GlobalCrashCatcher
+import com.igent.mobile.telemetry.AnrDetector
+import com.igent.mobile.telemetry.LifecycleTracker
 import com.igent.mobile.worker.BackgroundSyncWorker
 import com.igent.mobile.worker.DailyAgentWorker
 import com.igent.mobile.worker.TelemetrySyncWorker
@@ -21,9 +23,17 @@ class IgentApplication : Application(), androidx.work.Configuration.Provider {
     @Inject
     lateinit var workerFactory: HiltWorkerFactory
 
+    @Inject
+    lateinit var anrDetector: AnrDetector
+
+    @Inject
+    lateinit var lifecycleTracker: LifecycleTracker
+
     override fun onCreate() {
         super.onCreate()
         GlobalCrashCatcher.install(this)
+        anrDetector.start()
+        registerActivityLifecycleCallbacks(lifecycleTracker)
         scheduleBackgroundSync()
         scheduleDailyAgent()
         scheduleTelemetrySync()
