@@ -3,7 +3,9 @@ package com.igent.mobile.data.local
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import com.igent.mobile.data.local.dao.LogDao
+import com.igent.mobile.data.local.dao.SnapshotDao
 import com.igent.mobile.data.local.entity.LogEntity
+import com.igent.mobile.data.local.entity.SnapshotEntity
 import com.igent.mobile.data.local.dao.CourseDao
 import com.igent.mobile.data.local.entity.CourseEntity
 import com.igent.mobile.data.local.entity.CourseModuleEntity
@@ -31,9 +33,10 @@ import com.igent.mobile.data.local.entity.WeeklySummaryEntity
         CourseModuleEntity::class,
         QuizEntity::class,
         QuizScoreEntity::class,
-        LogEntity::class
+        LogEntity::class,
+        SnapshotEntity::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 abstract class IgentDatabase : RoomDatabase() {
@@ -44,6 +47,7 @@ abstract class IgentDatabase : RoomDatabase() {
     abstract fun weeklySummaryDao(): WeeklySummaryDao
     abstract fun courseDao(): CourseDao
     abstract fun logDao(): LogDao
+    abstract fun snapshotDao(): SnapshotDao
 
     companion object {
         const val DATABASE_NAME = "igent_database"

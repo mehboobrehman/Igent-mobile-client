@@ -94,16 +94,26 @@ test('Integration Test: Telemetry Server Session Persistence, Export & Endpoints
         seq: 2,
         timestamp: Date.now(),
         wallTime: Date.now(),
-        type: 'network',
-        payload: { method: 'GET', url: 'https://api.example.com/data', statusCode: 200, durationMs: 120, requestSize: 10, responseSize: 500 }
+        type: 'snapshots',
+        payload: { snapshotId: 'snap_1', triggerCategory: 'errors', triggerId: 'rule_1', occurrenceCount: 1, state: 'initial' }
       },
       {
         schemaVersion: '1.0.0',
         sessionId: testSessionId,
         deviceId: 'dev_integ_1',
         seq: 3,
-        timestamp: Date.now(),
-        wallTime: Date.now(),
+        timestamp: Date.now() + 1000,
+        wallTime: Date.now() + 1000,
+        type: 'snapshots',
+        payload: { snapshotId: 'snap_2', triggerCategory: 'errors', triggerId: 'rule_1', occurrenceCount: 2, state: 'updated' }
+      },
+      {
+        schemaVersion: '1.0.0',
+        sessionId: testSessionId,
+        deviceId: 'dev_integ_1',
+        seq: 4,
+        timestamp: Date.now() + 2000,
+        wallTime: Date.now() + 2000,
         type: 'crashes',
         payload: { exception: 'NullPointerException', fatal: true }
       }
@@ -122,13 +132,23 @@ test('Integration Test: Telemetry Server Session Persistence, Export & Endpoints
     assert.strictEqual(sessionsRes.body.totalSessions > 0, true);
     const foundSess = sessionsRes.body.sessions.find(s => s.sessionId === testSessionId);
     assert.notStrictEqual(foundSess, undefined);
-    assert.strictEqual(foundSess.eventCount, 3);
-    assert.strictEqual(foundSess.errorCount, 1);
+    assert.strictEqual(foundSess.eventCount, 4);
 
     const detailRes = await httpRequest(`http://localhost:${port}/api/sessions/${testSessionId}?token=${token}`);
     assert.strictEqual(detailRes.status, 200);
     assert.strictEqual(detailRes.body.sessionId, testSessionId);
-    assert.strictEqual(detailRes.body.events.length, 3);
+    assert.strictEqual(detailRes.body.snapshots.length, 2);
+    assert.strictEqual(detailRes.body.timelineMarkers.length > 0, true);
+
+    const snapshotsRes = await httpRequest(`http://localhost:${port}/api/sessions/${testSessionId}/snapshots?token=${token}`);
+    assert.strictEqual(snapshotsRes.status, 200);
+    assert.strictEqual(snapshotsRes.body.totalSnapshots, 2);
+
+    const diffRes = await httpRequest(`http://localhost:${port}/api/sessions/${testSessionId}/snapshots/diff?id1=snap_1&id2=snap_2&token=${token}`);
+    assert.strictEqual(diffRes.status, 200);
+    assert.strictEqual(diffRes.body.snapshot1Id, 'snap_1');
+    assert.strictEqual(diffRes.body.snapshot2Id, 'snap_2');
+    assert.notStrictEqual(diffRes.body.diff, undefined);
 
     const exportJsonRes = await httpRequest(`http://localhost:${port}/api/sessions/${testSessionId}/export?format=json&token=${token}`);
     assert.strictEqual(exportJsonRes.status, 200);
@@ -140,7 +160,7 @@ test('Integration Test: Telemetry Server Session Persistence, Export & Endpoints
     assert.notStrictEqual(exportHarRes.body.log, undefined);
     assert.strictEqual(exportHarRes.body.log.version, '1.2');
     assert.strictEqual(Array.isArray(exportHarRes.body.log.entries), true);
-    assert.strictEqual(exportHarRes.body.log.entries.length, 3);
+    assert.strictEqual(exportHarRes.body.log.entries.length, 4);
 
     const deleteRes = await httpRequest(`http://localhost:${port}/api/sessions/${testSessionId}?token=${token}`, {
       method: 'DELETE',

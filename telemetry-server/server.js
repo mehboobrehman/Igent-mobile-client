@@ -26,6 +26,8 @@ function createSessionSummary(sessionId, events) {
   let endTime = -Infinity;
   let errorCount = 0;
   const types = {};
+  const snapshots = [];
+  const timelineMarkers = [];
 
   for (const ev of events) {
     if (ev.deviceId) deviceId = ev.deviceId;
@@ -35,12 +37,38 @@ function createSessionSummary(sessionId, events) {
 
     if (ev.type === 'crashes' || ev.type === 'anrs') {
       errorCount++;
+      timelineMarkers.push({
+        timestamp: t,
+        type: ev.type,
+        title: `${ev.type.toUpperCase()}: ${ev.payload?.exceptionClass || 'Error'}`,
+        detail: ev.payload?.message || ev.payload?.stackTrace || '',
+        event: ev
+      });
+    } else if (ev.type === 'snapshots') {
+      snapshots.push(ev);
+      timelineMarkers.push({
+        timestamp: t,
+        type: 'snapshots',
+        title: `Snapshot: ${ev.payload?.triggerCategory || 'Trigger'} (${ev.payload?.triggerId || 'unknown'})`,
+        detail: `Occurrence: ${ev.payload?.occurrenceCount || 1}`,
+        event: ev
+      });
     } else if (ev.type === 'logs' && ev.payload && (ev.payload.level === 'ERROR' || ev.payload.level === 'FATAL')) {
       errorCount++;
+      timelineMarkers.push({
+        timestamp: t,
+        type: 'error_log',
+        title: `Error Log: ${ev.payload.tag}`,
+        detail: ev.payload.message,
+        event: ev
+      });
     }
 
     types[ev.type] = (types[ev.type] || 0) + 1;
   }
+
+  timelineMarkers.sort((a, b) => a.timestamp - b.timestamp);
+  snapshots.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
 
   if (startTime === Infinity) startTime = Date.now();
   if (endTime === -Infinity) endTime = startTime;
@@ -53,6 +81,8 @@ function createSessionSummary(sessionId, events) {
     eventCount: events.length,
     errorCount,
     types,
+    snapshots,
+    timelineMarkers,
     events
   };
 }
@@ -111,6 +141,8 @@ function persistEnvelope(envelope) {
       eventCount: 0,
       errorCount: 0,
       types: {},
+      snapshots: [],
+      timelineMarkers: [],
       events: []
     };
     sessionsMap.set(sessionId, session);
@@ -125,10 +157,35 @@ function persistEnvelope(envelope) {
 
   if (envelope.type === 'crashes' || envelope.type === 'anrs') {
     session.errorCount++;
+    session.timelineMarkers.push({
+      timestamp: t,
+      type: envelope.type,
+      title: `${envelope.type.toUpperCase()}: ${envelope.payload?.exceptionClass || 'Error'}`,
+      detail: envelope.payload?.message || envelope.payload?.stackTrace || '',
+      event: envelope
+    });
+  } else if (envelope.type === 'snapshots') {
+    session.snapshots.push(envelope);
+    session.timelineMarkers.push({
+      timestamp: t,
+      type: 'snapshots',
+      title: `Snapshot: ${envelope.payload?.triggerCategory || 'Trigger'} (${envelope.payload?.triggerId || 'unknown'})`,
+      detail: `Occurrence: ${envelope.payload?.occurrenceCount || 1}`,
+      event: envelope
+    });
   } else if (envelope.type === 'logs' && envelope.payload && (envelope.payload.level === 'ERROR' || envelope.payload.level === 'FATAL')) {
     session.errorCount++;
+    session.timelineMarkers.push({
+      timestamp: t,
+      type: 'error_log',
+      title: `Error Log: ${envelope.payload.tag}`,
+      detail: envelope.payload.message,
+      event: envelope
+    });
   }
   session.types[envelope.type] = (session.types[envelope.type] || 0) + 1;
+  session.timelineMarkers.sort((a, b) => a.timestamp - b.timestamp);
+  session.snapshots.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
 }
 
 // Load historical sessions on startup
@@ -136,7 +193,7 @@ loadExistingSessions();
 
 const VALID_TYPES = [
   'logs', 'crashes', 'anrs', 'network', 'performance',
-  'lifecycle', 'state', 'config', 'commands', 'heartbeats'
+  'lifecycle', 'state', 'config', 'commands', 'heartbeats', 'snapshots'
 ];
 
 function validateEnvelope(item) {
@@ -767,6 +824,61 @@ app.get('/api/sessions/:sessionId/export', (req, res) => {
     res.setHeader('Content-Disposition', `attachment; filename="${sessionId}.json"`);
     return res.send(JSON.stringify(sess, null, 2));
   }
+});
+
+// GET /api/sessions/:sessionId/snapshots: Retrieve all snapshots for a session
+app.get('/api/sessions/:sessionId/snapshots', (req, res) => {
+  const sessionId = req.params.sessionId;
+  const sess = sessionsMap.get(sessionId);
+  if (!sess) {
+    return res.status(404).json({ error: `Session not found: ${sessionId}` });
+  }
+  res.json({
+    sessionId,
+    totalSnapshots: sess.snapshots.length,
+    snapshots: sess.snapshots
+  });
+});
+
+// GET /api/sessions/:sessionId/snapshots/diff: Diff two snapshots by event index or snapshotId
+app.get('/api/sessions/:sessionId/snapshots/diff', (req, res) => {
+  const sessionId = req.params.sessionId;
+  const sess = sessionsMap.get(sessionId);
+  if (!sess) {
+    return res.status(404).json({ error: `Session not found: ${sessionId}` });
+  }
+  const id1 = req.query.id1;
+  const id2 = req.query.id2;
+  if (!id1 || !id2) {
+    return res.status(400).json({ error: 'Both id1 and id2 query parameters are required for diffing' });
+  }
+
+  const snap1 = sess.snapshots.find(s => s.payload?.snapshotId === id1 || s.seq.toString() === id1);
+  const snap2 = sess.snapshots.find(s => s.payload?.snapshotId === id2 || s.seq.toString() === id2);
+
+  if (!snap1 || !snap2) {
+    return res.status(404).json({ error: 'One or both snapshots not found' });
+  }
+
+  const p1 = snap1.payload || {};
+  const p2 = snap2.payload || {};
+  const keys = new Set([...Object.keys(p1), ...Object.keys(p2)]);
+  const diff = {};
+  for (const key of keys) {
+    const val1 = JSON.stringify(p1[key]);
+    const val2 = JSON.stringify(p2[key]);
+    if (val1 !== val2) {
+      diff[key] = { from: p1[key], to: p2[key] };
+    }
+  }
+
+  res.json({
+    sessionId,
+    snapshot1Id: id1,
+    snapshot2Id: id2,
+    differenceCount: Object.keys(diff).length,
+    diff
+  });
 });
 
 // DELETE /api/sessions/:sessionId: Clear/delete a session
