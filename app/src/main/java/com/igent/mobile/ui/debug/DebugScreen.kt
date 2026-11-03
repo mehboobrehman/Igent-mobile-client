@@ -45,7 +45,15 @@ fun DebugScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("MDrive Telemetry & Debug") },
+                title = {
+                    Column {
+                        Text("MDrive Telemetry & Debug")
+                        Text(
+                            "v${com.igent.mobile.BuildConfig.VERSION_NAME}",
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")

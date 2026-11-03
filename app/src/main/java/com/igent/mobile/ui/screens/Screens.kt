@@ -264,7 +264,7 @@ fun SettingsHubScreen(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "Version 1.0.0", // Hardcoded or fetch from BuildConfig
+                    text = "Version ${com.igent.mobile.BuildConfig.VERSION_NAME}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.clickable {
