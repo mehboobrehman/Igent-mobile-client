@@ -108,14 +108,79 @@ app.post('/api/sync', (req, res) => {
   }
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`========================================`);
-  console.log(` Igent Telemetry & Remote Config Server `);
-  console.log(` Running on port ${PORT}                 `);
-  console.log(` Endpoints:                             `);
-  console.log(`   POST /api/telemetry                  `);
-  console.log(`   GET  /api/config                     `);
-  console.log(`   POST /api/sync                       `);
-  console.log(`========================================`);
-});
+// Start server with robust port fallback mechanism
+const net = require('net');
+const fs = require('fs');
+const path = require('path');
+
+const requestedPort = parseInt(process.env.PORT, 10) || 3000;
+
+function checkPort(port) {
+  return new Promise((resolve) => {
+    const tester = net.createServer()
+      .once('error', (err) => {
+        if (err.code === 'EADDRINUSE') {
+          resolve(false);
+        } else {
+          resolve(false);
+        }
+      })
+      .once('listening', () => {
+        tester.close(() => {
+          resolve(true);
+        });
+      })
+      .listen(port);
+  });
+}
+
+async function findAvailablePort(startPort) {
+  let port = startPort;
+  const maxPort = startPort + 100;
+  while (port <= maxPort) {
+    const available = await checkPort(port);
+    if (available) {
+      return port;
+    }
+    console.log(`[INFO] Port ${port} is already in use.`);
+    port++;
+  }
+  throw new Error(`No available ports found between ${startPort} and ${maxPort}`);
+}
+
+async function startServer() {
+  try {
+    const activePort = await findAvailablePort(requestedPort);
+    if (activePort !== requestedPort) {
+      console.log(`[INFO] Requested port ${requestedPort} was busy. Fallback port ${activePort} selected.`);
+    }
+
+    const server = app.listen(activePort, () => {
+      console.log(`========================================`);
+      console.log(` Igent Telemetry & Remote Config Server `);
+      console.log(` Running on active port: ${activePort}   `);
+      console.log(` Endpoints:                             `);
+      console.log(`   POST /api/telemetry                  `);
+      console.log(`   GET  /api/config                     `);
+      console.log(`   POST /api/sync                       `);
+      console.log(`========================================`);
+
+      // Write active port number to .active-port file inside telemetry-server directory
+      try {
+        const activePortFilePath = path.join(__dirname, '.active-port');
+        fs.writeFileSync(activePortFilePath, String(activePort), 'utf8');
+        console.log(`[INFO] Wrote active port ${activePort} to ${activePortFilePath}`);
+      } catch (fileErr) {
+        console.error('[ERROR] Failed to write .active-port file:', fileErr);
+      }
+    });
+
+    // Export server instance for testing if required
+    module.exports = server;
+  } catch (err) {
+    console.error('[ERROR] Failed to start telemetry server:', err);
+    process.exit(1);
+  }
+}
+
+startServer();
