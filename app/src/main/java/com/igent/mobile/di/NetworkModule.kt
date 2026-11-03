@@ -1,6 +1,7 @@
 package com.igent.mobile.di
 
 import com.igent.mobile.data.remote.config.ConfigApiService
+import com.igent.mobile.data.remote.telemetry.TelemetryBaseUrlInterceptor
 import com.igent.mobile.data.remote.telemetry.TelemetryInterceptor
 import com.igent.mobile.data.preferences.PreferencesDataSource
 import com.igent.mobile.data.remote.AuthInterceptor
@@ -65,13 +66,15 @@ object NetworkModule {
     @Singleton
     fun provideOkHttpClient(
         authInterceptor: AuthInterceptor,
-        telemetryInterceptor: TelemetryInterceptor
+        telemetryInterceptor: TelemetryInterceptor,
+        telemetryBaseUrlInterceptor: TelemetryBaseUrlInterceptor
     ): OkHttpClient {
         val logging = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
         }
         val builder = OkHttpClient.Builder()
             .addInterceptor(authInterceptor)
+            .addInterceptor(telemetryBaseUrlInterceptor)
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
@@ -172,24 +175,15 @@ object NetworkModule {
     }
 
     @Provides
-    @Named("TelemetryBaseUrl")
-    fun provideTelemetryBaseUrl(preferencesDataSource: PreferencesDataSource): String {
-        return kotlinx.coroutines.runBlocking {
-            preferencesDataSource.telemetryBaseUrl.first()
-        }
-    }
-
-    @Provides
     @Singleton
     @TelemetryRetrofit
     fun provideTelemetryRetrofit(
-        @Named("TelemetryBaseUrl") baseUrl: String,
         okHttpClient: OkHttpClient,
         json: Json
     ): Retrofit {
         val contentType = "application/json".toMediaType()
         return Retrofit.Builder()
-            .baseUrl(baseUrl)
+            .baseUrl("https://igent-telemetry.local/")
             .client(okHttpClient)
             .addConverterFactory(json.asConverterFactory(contentType))
             .build()

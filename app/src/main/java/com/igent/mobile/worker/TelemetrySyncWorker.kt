@@ -1,6 +1,7 @@
 package com.igent.mobile.worker
 
 import android.content.Context
+import android.os.Build
 import android.util.Log
 import androidx.hilt.work.HiltWorker
 import androidx.work.Constraints
@@ -12,9 +13,11 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.igent.mobile.data.local.dao.LogDao
 import com.igent.mobile.data.remote.telemetry.TelemetryApiService
-import com.igent.mobile.data.remote.telemetry.TelemetryLogDto
+import com.igent.mobile.data.remote.telemetry.TelemetryEnvelopeDto
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import java.util.UUID
+import java.util.concurrent.atomic.AtomicLong
 
 @HiltWorker
 class TelemetrySyncWorker @AssistedInject constructor(
@@ -37,8 +40,10 @@ class TelemetrySyncWorker @AssistedInject constructor(
             Log.d(TAG, "Found ${unsyncedLogs.size} unsynced logs")
 
             val dtos = unsyncedLogs.map { log ->
-                TelemetryLogDto(
-                    timestamp = log.timestamp,
+                TelemetryEnvelopeDto.createLog(
+                    sessionId = SESSION_ID,
+                    deviceId = DEVICE_ID,
+                    seq = seqCounter.incrementAndGet(),
                     level = log.level,
                     message = log.message,
                     tag = log.tag
@@ -65,8 +70,10 @@ class TelemetrySyncWorker @AssistedInject constructor(
             } else {
                 // Fallback to individual log sync
                 for (log in unsyncedLogs) {
-                    val dto = TelemetryLogDto(
-                        timestamp = log.timestamp,
+                    val dto = TelemetryEnvelopeDto.createLog(
+                        sessionId = SESSION_ID,
+                        deviceId = DEVICE_ID,
+                        seq = seqCounter.incrementAndGet(),
                         level = log.level,
                         message = log.message,
                         tag = log.tag
@@ -101,6 +108,10 @@ class TelemetrySyncWorker @AssistedInject constructor(
         private const val TAG = "TelemetrySyncWorker"
         const val WORK_NAME = "com.igent.mobile.worker.TelemetrySyncWorker"
         const val ONE_TIME_WORK_NAME = "com.igent.mobile.worker.TelemetrySyncWorker.OneTime"
+
+        private val SESSION_ID = "session_" + UUID.randomUUID().toString()
+        private val DEVICE_ID = "android_${Build.MODEL.replace(" ", "_")}_${UUID.randomUUID().toString().take(8)}"
+        private val seqCounter = AtomicLong(0)
 
         fun enqueueOneTimeSync(context: Context) {
             val constraints = Constraints.Builder()
