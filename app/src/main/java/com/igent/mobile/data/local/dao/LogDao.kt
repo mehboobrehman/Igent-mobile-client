@@ -25,4 +25,10 @@ interface LogDao {
 
     @Query("SELECT * FROM agent_logs WHERE isSynced = 0 ORDER BY timestamp ASC LIMIT 100")
     suspend fun getUnsyncedLogs(): List<LogEntity>
+
+    @Query("SELECT COUNT(*) FROM agent_logs WHERE isSynced = 0")
+    suspend fun getUnsyncedCount(): Int
+
+    @Query("DELETE FROM agent_logs WHERE id IN (SELECT id FROM agent_logs WHERE isSynced = 0 ORDER BY timestamp ASC LIMIT :limit)")
+    suspend fun deleteOldestLogs(limit: Int)
 }
