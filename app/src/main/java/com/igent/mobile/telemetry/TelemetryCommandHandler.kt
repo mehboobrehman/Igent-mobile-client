@@ -7,14 +7,17 @@ import javax.inject.Singleton
 @Singleton
 class TelemetryCommandHandler @Inject constructor(
     private val logger: AgentLogger,
-    private val performanceCollector: PerformanceCollector
+    private val performanceCollector: PerformanceCollector,
+    private val stateInspector: StateInspector
 ) {
     private val allowedCommands = setOf(
         "ping",
         "change_log_level",
         "toggle_category",
         "request_snapshot",
-        "restart_sync"
+        "restart_sync",
+        "list_state_providers",
+        "inspect_state"
     )
 
     fun handleCommand(commandId: String, commandName: String, parameters: String): CommandResult {
@@ -47,6 +50,24 @@ class TelemetryCommandHandler @Inject constructor(
                 "restart_sync" -> {
                     logger.triggerSync()
                     CommandResult(commandId, true, "Sync triggered")
+                }
+                "list_state_providers" -> {
+                    val providers = stateInspector.listProviders()
+                    CommandResult(commandId, true, providers.joinToString(","))
+                }
+                "inspect_state" -> {
+                    val providerName = parameters.trim()
+                    if (providerName.isEmpty()) {
+                        return CommandResult(commandId, false, "Provider name parameter required")
+                    }
+                    when (val result = stateInspector.inspectState(providerName)) {
+                        is StateInspector.InspectionResult.Success -> {
+                            CommandResult(commandId, true, "Success: ${result.data.size} keys, ${result.sizeBytes} bytes")
+                        }
+                        is StateInspector.InspectionResult.Error -> {
+                            CommandResult(commandId, false, result.message)
+                        }
+                    }
                 }
                 else -> {
                     CommandResult(commandId, false, "Unknown command handler for $commandName")
