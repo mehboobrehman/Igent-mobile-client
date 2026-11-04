@@ -60,7 +60,37 @@ Environment variables supported by the telemetry server:
 
 ---
 
-## 4. Troubleshooting Guide
+## 5. Debugging & Debugger-Attach Helper
+
+For interactive code debugging (breakpoints, variable inspection), the telemetry system must coexist with the Android Studio/IntelliJ debugger.
+
+### 5.1. Using the Debugger-Attach Helper
+To simplify port forwarding and IDE attachment, use the provided helper scripts:
+
+- **Windows:**
+  ```cmd
+  attach-debugger.bat
+  ```
+- **macOS / Linux:**
+  ```bash
+  ./attach-debugger.sh
+  ```
+
+This script:
+1. Detects connected devices/emulators.
+2. Sets up `adb reverse tcp:3000 tcp:3000`.
+3. Optionally launches the app.
+4. Provides instructions to attach the Android Studio debugger.
+
+### 5.2. Debugger-Attached Hang Suppression
+When paused at a breakpoint on the main thread, the telemetry system's ANR detector may falsely trigger a hang event.
+
+- **Automatic Suppression:** The app includes a "Debugger-Attached Mode" (via `android.os.Debug.isDebuggerConnected()`). When an IDE debugger is attached, ANR detection is automatically suppressed.
+- **Usage:** Simply attach the debugger via Android Studio/IntelliJ. No manual configuration is required.
+
+---
+
+## 6. Troubleshooting Guide
 
 ### Issue 1: Telemetry not reaching server from emulator / device
 - **Symptom:** Logs appear locally on device but never arrive at `http://localhost:3000`.

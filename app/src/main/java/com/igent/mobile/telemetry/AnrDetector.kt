@@ -33,6 +33,12 @@ class AnrDetector @Inject constructor(
                 mainHandler.post(heartbeatRunnable)
                 Thread.sleep(checkIntervalMs)
 
+                // If an IDE debugger is attached (e.g. paused at breakpoint), suppress ANR triggers
+                if (android.os.Debug.isDebuggerConnected()) {
+                    lastHeartbeat.set(System.currentTimeMillis())
+                    continue
+                }
+
                 val delta = System.currentTimeMillis() - lastHeartbeat.get()
                 if (delta > anrThresholdMs) {
                     val mainThread = Looper.getMainLooper().thread
