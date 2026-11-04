@@ -183,6 +183,30 @@ function persistEnvelope(envelope) {
       event: envelope
     });
   }
+
+  if (envelope.type === 'logpoints' && envelope.payload && envelope.payload.logpointId) {
+    const lpId = envelope.payload.logpointId;
+    let lp = logpointsMap.get(lpId);
+    if (!lp) {
+      lp = {
+        id: lpId,
+        tag: envelope.payload.tag || 'Logpoint',
+        defaultLevel: envelope.payload.level || 'INFO',
+        callSite: envelope.payload.callSite || '',
+        enabled: true,
+        level: envelope.payload.level || 'INFO',
+        samplingRate: 1.0,
+        condition: null,
+        hitCount: 0,
+        dropCount: 0,
+        lastHitTime: t
+      };
+      logpointsMap.set(lpId, lp);
+    }
+    lp.hitCount++;
+    lp.lastHitTime = t;
+  }
+
   session.types[envelope.type] = (session.types[envelope.type] || 0) + 1;
   session.timelineMarkers.sort((a, b) => a.timestamp - b.timestamp);
   session.snapshots.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
@@ -191,9 +215,11 @@ function persistEnvelope(envelope) {
 // Load historical sessions on startup
 loadExistingSessions();
 
+const logpointsMap = new Map();
+
 const VALID_TYPES = [
   'logs', 'crashes', 'anrs', 'network', 'performance',
-  'lifecycle', 'state', 'config', 'commands', 'heartbeats', 'snapshots'
+  'lifecycle', 'state', 'config', 'commands', 'heartbeats', 'snapshots', 'logpoints'
 ];
 
 function validateEnvelope(item) {
@@ -949,6 +975,46 @@ app.get('/api/config', (_, res) => {
   res.json(config);
 });
 
+// GET /api/logpoints: List all registered logpoints
+app.get('/api/logpoints', (req, res) => {
+  res.json({ success: true, logpoints: Array.from(logpointsMap.values()) });
+});
+
+// POST /api/logpoints/config: Configure logpoint live
+app.post('/api/logpoints/config', (req, res) => {
+  try {
+    const { id, enabled, level, samplingRate, condition } = req.body;
+    if (!id) {
+      return res.status(400).json({ success: false, error: 'Logpoint id required' });
+    }
+    let lp = logpointsMap.get(id);
+    if (!lp) {
+      lp = {
+        id,
+        tag: req.body.tag || 'Logpoint',
+        defaultLevel: level || 'INFO',
+        callSite: req.body.callSite || '',
+        enabled: enabled !== undefined ? enabled : true,
+        level: level || 'INFO',
+        samplingRate: samplingRate !== undefined ? samplingRate : 1.0,
+        condition: condition || null,
+        hitCount: 0,
+        dropCount: 0,
+        lastHitTime: Date.now()
+      };
+      logpointsMap.set(id, lp);
+    } else {
+      if (enabled !== undefined) lp.enabled = enabled;
+      if (level !== undefined) lp.level = level;
+      if (samplingRate !== undefined) lp.samplingRate = samplingRate;
+      if (condition !== undefined) lp.condition = condition;
+    }
+    res.json({ success: true, logpoint: lp });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // POST /api/sync: Endpoint for client sync requests
 app.post('/api/sync', (req, res) => {
   try {
@@ -963,7 +1029,8 @@ app.post('/api/sync', (req, res) => {
       updates: {
         newConfigAvailable: false,
         pendingMessagesCount: 0,
-        serverStatus: "healthy"
+        serverStatus: "healthy",
+        logpoints: Array.from(logpointsMap.values())
       }
     };
 

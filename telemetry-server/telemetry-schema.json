@@ -47,7 +47,8 @@
         "state",
         "config",
         "commands",
-        "heartbeats"
+        "heartbeats",
+        "logpoints"
       ]
     },
     "payload": {

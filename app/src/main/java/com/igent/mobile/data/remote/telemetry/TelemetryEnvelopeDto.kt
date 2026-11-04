@@ -221,11 +221,41 @@ data class TelemetryEnvelopeDto(
                 payload = payloadObj
             )
         }
+
+        fun createLogpoint(
+            sessionId: String,
+            deviceId: String,
+            seq: Long,
+            logpointId: String,
+            tag: String,
+            level: String,
+            message: String,
+            callSite: String
+        ): TelemetryEnvelopeDto {
+            val now = System.currentTimeMillis()
+            val payloadObj = buildJsonObject {
+                put("logpointId", JsonPrimitive(logpointId))
+                put("tag", JsonPrimitive(tag))
+                put("level", JsonPrimitive(level))
+                put("message", JsonPrimitive(message))
+                put("callSite", JsonPrimitive(callSite))
+            }
+            return TelemetryEnvelopeDto(
+                schemaVersion = "1.0.0",
+                sessionId = sessionId,
+                deviceId = deviceId,
+                seq = seq,
+                timestamp = now,
+                wallTime = now,
+                type = "logpoints",
+                payload = payloadObj
+            )
+        }
     }
 }
 
 fun validateTelemetryEnvelope(envelope: TelemetryEnvelopeDto): Boolean {
-    val validTypes = setOf("logs", "crashes", "anrs", "network", "performance", "lifecycle", "state", "config", "commands", "heartbeats")
+    val validTypes = setOf("logs", "crashes", "anrs", "network", "performance", "lifecycle", "state", "config", "commands", "heartbeats", "logpoints")
     return envelope.schemaVersion == "1.0.0" &&
            envelope.sessionId.isNotBlank() &&
            envelope.deviceId.isNotBlank() &&
