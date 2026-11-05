@@ -211,8 +211,7 @@ if [ "$SKIP_PUSH" = false ]; then
     info "Creating GitHub Release $TAG_NAME and attaching APKs..."
     "$GH_CMD" release create "$TAG_NAME" "$DEBUG_APK" "$RELEASE_APK" \
         --title "Release $TAG_NAME" \
-        --notes "Automated release $TAG_NAME" \
-        --clobber
+        --notes "Automated release $TAG_NAME"
 
     success "GitHub Release $TAG_NAME successfully created with attached APKs!"
 else
