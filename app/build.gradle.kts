@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -7,6 +9,17 @@ plugins {
 }
 
 android {
+    val versionPropsFile = rootProject.file("version.properties")
+    val versionProperties = Properties()
+    if (versionPropsFile.exists()) {
+        versionPropsFile.inputStream().use { versionProperties.load(it) }
+    }
+
+    val major = versionProperties.getProperty("MAJOR", "1").toInt()
+    val minor = versionProperties.getProperty("MINOR", "0").toInt()
+    val patch = versionProperties.getProperty("PATCH", "0").toInt()
+    val build = versionProperties.getProperty("BUILD", "0").toInt()
+
     namespace = "com.igent.mobile"
     compileSdk = 34
 
@@ -23,8 +36,8 @@ android {
         applicationId = "com.igent.mobile"
         minSdk = 26
         targetSdk = 34
-        versionCode = 21
-        versionName = "1.0.21"
+        versionCode = major * 10000 + minor * 1000 + patch * 100 + build
+        versionName = "$major.$minor.$patch"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
