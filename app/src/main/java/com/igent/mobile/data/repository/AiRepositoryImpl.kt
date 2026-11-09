@@ -182,16 +182,7 @@ class AiRepositoryImpl @Inject constructor(
                 }
             }
 
-            // 4. Fallback to Pollinations AI (Public Free API)
-            if (!success) {
-                val pollinationsContent = callPollinationsAi(messagesList)
-                if (!pollinationsContent.isNullOrBlank()) {
-                    aiResponseContent = pollinationsContent
-                    success = true
-                }
-            }
-
-            // 5. Ultimate intelligent local fallback if everything else fails (offline)
+            // 4. Ultimate intelligent local fallback if everything else fails (offline)
             if (!success || aiResponseContent.isBlank()) {
                 aiResponseContent = getLocalIntelligentResponse(prompt)
             }
@@ -343,19 +334,6 @@ class AiRepositoryImpl @Inject constructor(
                 }
             }
         }
-
-        // 4. Fallback to Pollinations AI non-streaming chunk if streaming failed
-        if (!streamed) {
-            try {
-                val content = callPollinationsAi(messagesList)
-                if (!content.isNullOrBlank()) {
-                    emit(content)
-                    streamed = true
-                }
-            } catch (e: Exception) {
-                // Ignore
-            }
-        }
     }
 
     override suspend fun saveAiInteraction(prompt: String, response: String): Result<Message> = withContext(Dispatchers.IO) {
@@ -381,39 +359,6 @@ class AiRepositoryImpl @Inject constructor(
             Result.success(aiMessage)
         } catch (e: Exception) {
             Result.failure(e)
-        }
-    }
-
-    private suspend fun callPollinationsAi(messagesList: List<ChatMessage>): String? {
-        return withContext(Dispatchers.IO) {
-            try {
-                val jsonString = buildString {
-                    append("{\"messages\":[")
-                    messagesList.forEachIndexed { index, msg ->
-                        val escapedContent = msg.content.replace("\\", "\\\\")
-                            .replace("\"", "\\\"")
-                            .replace("\n", "\\n")
-                            .replace("\r", "\\r")
-                        append("{\"role\":\"${msg.role}\",\"content\":\"$escapedContent\"}")
-                        if (index < messagesList.size - 1) append(",")
-                    }
-                    append("]}")
-                }
-                
-                val mediaType = "application/json; charset=utf-8".toMediaType()
-                val request = Request.Builder()
-                    .url("https://text.pollinations.ai/")
-                    .post(jsonString.toRequestBody(mediaType))
-                    .build()
-                    
-                val response = okHttpClient.newCall(request).execute()
-                if (response.isSuccessful) {
-                    val body = response.body?.string()
-                    if (!body.isNullOrBlank()) body.trim() else null
-                } else null
-            } catch (e: Exception) {
-                null
-            }
         }
     }
 

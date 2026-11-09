@@ -1,0 +1,119 @@
+[
+  {
+    "name": "normal_monthly_high",
+    "input": [
+      "Earn 5% monthly profit!"
+    ],
+    "expected": {
+      "flag": "Very high return claimed (5% monthly)",
+      "why": "5% a month is about 79% a year, far above what safe options or even good shares pay. Returns like this usually come from new members' money."
+    },
+    "actual": {
+      "flag": "Very high return claimed (5% month)",
+      "why": "5% a month is about 80% a year, far above what safe options or even good shares pay. Returns like this usually come from new members' money."
+    },
+    "passed": false
+  },
+  {
+    "name": "normal_daily_high",
+    "input": [
+      "Get 0.5% daily return!"
+    ],
+    "expected": {
+      "flag": "Very high return claimed (0.5% daily)",
+      "why": "Daily or weekly profit figures are a classic sign of a Ponzi or trading scam."
+    },
+    "actual": {
+      "flag": "Very high return claimed (0.5% daily)",
+      "why": "Daily or weekly profit figures are a classic sign of a Ponzi or trading scam."
+    },
+    "passed": true
+  },
+  {
+    "name": "normal_weekly_high",
+    "input": [
+      "1% weekly profit!"
+    ],
+    "expected": {
+      "flag": "Very high return claimed (1% weekly)",
+      "why": "Daily or weekly profit figures are a classic sign of a Ponzi or trading scam."
+    },
+    "actual": {
+      "flag": "Very high return claimed (1% week)",
+      "why": "Daily or weekly profit figures are a classic sign of a Ponzi or trading scam."
+    },
+    "passed": false
+  },
+  {
+    "name": "normal_monthly_low",
+    "input": [
+      "Earn 1% monthly profit."
+    ],
+    "expected": null,
+    "actual": null,
+    "passed": true
+  },
+  {
+    "name": "empty",
+    "input": [
+      ""
+    ],
+    "expected": null,
+    "actual": null,
+    "passed": true
+  },
+  {
+    "name": "no_match",
+    "input": [
+      "Invest in safe options."
+    ],
+    "expected": null,
+    "actual": null,
+    "passed": true
+  },
+  {
+    "name": "urdu_monthly",
+    "input": [
+      "ماہانہ 5% منافع کمائیں"
+    ],
+    "expected": {
+      "flag": "Very high return claimed (5%ماہانہ)",
+      "why": "5% a month is about 79% a year, far above what safe options or even good shares pay. Returns like this usually come from new members' money."
+    },
+    "actual": null,
+    "passed": false
+  },
+  {
+    "name": "roman_urdu_daily",
+    "input": [
+      "Rozana 0.5% profit hasil karein"
+    ],
+    "expected": {
+      "flag": "Very high return claimed (0.5% Rozana)",
+      "why": "Daily or weekly profit figures are a classic sign of a Ponzi or trading scam."
+    },
+    "actual": null,
+    "passed": false
+  },
+  {
+    "name": "zero_percent",
+    "input": [
+      "0% monthly return"
+    ],
+    "expected": null,
+    "actual": null,
+    "passed": true
+  },
+  {
+    "name": "negative_percent",
+    "input": [
+      "-5% monthly return"
+    ],
+    "expected": null,
+    "actual": {
+      "flag": "Very high return claimed (5% month)",
+      "why": "5% a month is about 80% a year, far above what safe options or even good shares pay. Returns like this usually come from new members' money."
+    },
+    "passed": false
+  }
+]

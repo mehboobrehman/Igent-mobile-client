@@ -70,7 +70,12 @@ object NetworkModule {
         telemetryBaseUrlInterceptor: TelemetryBaseUrlInterceptor
     ): OkHttpClient {
         val logging = HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BODY
+            level = if (com.igent.mobile.BuildConfig.DEBUG) {
+                HttpLoggingInterceptor.Level.BODY
+            } else {
+                HttpLoggingInterceptor.Level.NONE
+            }
+            redactHeader("Authorization")
         }
         val builder = OkHttpClient.Builder()
             .addInterceptor(authInterceptor)

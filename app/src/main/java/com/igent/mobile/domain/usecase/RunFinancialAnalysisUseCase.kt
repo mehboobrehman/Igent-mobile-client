@@ -106,29 +106,7 @@ class RunFinancialAnalysisUseCase @Inject constructor(
     }
 
     private fun extractVerdict(content: String, type: FinancialAnalysisType): String {
-        val upper = content.uppercase()
-        return when (type) {
-            FinancialAnalysisType.BUY_SELL -> {
-                if (upper.contains("STRONG BUY")) "STRONG BUY"
-                else if (upper.contains("STRONG SELL")) "STRONG SELL"
-                else if (upper.contains("BUY")) "BUY"
-                else if (upper.contains("SELL")) "SELL"
-                else if (upper.contains("HOLD")) "HOLD"
-                else "NEUTRAL / HOLD"
-            }
-            FinancialAnalysisType.FUND_PICKER -> {
-                if (upper.contains("TOP PICK")) "TOP PICK"
-                else if (upper.contains("RECOMMENDED")) "RECOMMENDED"
-                else if (upper.contains("AVOID")) "AVOID"
-                else "MODERATE"
-            }
-            FinancialAnalysisType.SCAM_CHECK -> {
-                if (upper.contains("HIGH RISK") || upper.contains("SCAM") || upper.contains("FRAUD")) "HIGH RISK / POTENTIAL SCAM"
-                else if (upper.contains("CAUTION")) "CAUTION ADVISED"
-                else if (upper.contains("LEGITIMATE") || upper.contains("VERIFIED")) "VERIFIED LEGITIMATE"
-                else "UNKNOWN / UNVERIFIED"
-            }
-        }
+        return "ANALYSIS COMPLETE"
     }
 
     private fun extractScore(content: String): Int {
@@ -138,13 +116,7 @@ class RunFinancialAnalysisUseCase @Inject constructor(
             val num = match.groupValues[2].toIntOrNull()
             if (num != null && num in 0..100) return num
         }
-        // Fallback search for any number out of 100
-        val numRegex = Regex("""\b([0-9]{1,2}|100)/100\b""")
-        val numMatch = numRegex.find(content)
-        if (numMatch != null) {
-            return numMatch.groupValues[1].toIntOrNull() ?: 70
-        }
-        return 75
+        return 0
     }
 
     private fun extractBulletPoints(content: String): List<String> {
@@ -159,11 +131,7 @@ class RunFinancialAnalysisUseCase @Inject constructor(
                 }
             }
         }
-        return if (points.isNotEmpty()) points.take(4) else listOf(
-            "Analyzed against current PSX market conditions and fundamental indicators.",
-            "Review volatility and risk appetite before executing transactions.",
-            "Consult with a licensed financial advisor for personalized portfolio allocation."
-        )
+        return points.take(5)
     }
 
     private fun extractMetrics(content: String, stock: com.igent.mobile.domain.model.Stock?): Map<String, String> {
@@ -171,12 +139,7 @@ class RunFinancialAnalysisUseCase @Inject constructor(
         if (stock != null) {
             map["Current Price"] = "Rs. ${stock.price}"
             map["24h Change"] = "${stock.change} (${stock.percentChange}%)"
-            map["Volume"] = "${stock.volume}"
-        } else {
-            map["Market Status"] = "Active"
         }
-        map["Regulatory Status"] = "SECP / PSX Regulated"
-        map["Risk Level"] = "Moderate - High"
         return map
     }
 }

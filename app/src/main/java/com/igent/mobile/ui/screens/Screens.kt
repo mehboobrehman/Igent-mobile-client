@@ -19,12 +19,18 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.igent.mobile.ui.Screen
 import com.igent.mobile.ui.auth.AuthScreen
+import com.igent.mobile.ui.dashboard.DashboardScreen
 import com.igent.mobile.ui.chat.ChatScreen
 import com.igent.mobile.ui.analysis.FinancialAnalysisScreen
+import com.igent.mobile.ui.checkup.StockCheckupScreen
+import com.igent.mobile.ui.portfolio.PortfolioLedgerScreen
+import com.igent.mobile.ui.screener.ScreenerScreen
 import com.igent.mobile.ui.psx.PsxScreen
 import com.igent.mobile.ui.rss.RssScreen
 import com.igent.mobile.ui.idea.IdeaCardsScreen
 import com.igent.mobile.ui.learning.LearningScreen
+import com.igent.mobile.ui.quiz.QuizScreen
+import com.igent.mobile.ui.practice.PracticeBookScreen
 import com.igent.mobile.ui.settings.NotificationSettingsScreen
 import com.igent.mobile.ui.debug.DebugScreen
 
@@ -41,7 +47,7 @@ fun IgentAppShell(initialTargetScreen: String? = null) {
             val destination = when (initialTargetScreen.lowercase()) {
                 "stocks", "stock" -> Screen.Stocks.route
                 "rss", "news" -> Screen.Rss.route
-                else -> Screen.Chat.route
+                else -> Screen.Dashboard.route
             }
             navController.navigate(destination) {
                 popUpTo(Screen.Auth.route) { inclusive = false }
@@ -73,9 +79,9 @@ fun IgentAppShell(initialTargetScreen: String? = null) {
             if (showBottomBar) {
                 NavigationBar {
                     val items = listOf(
-                        Triple(Screen.Chat, "Chat", Icons.Default.Chat),
+                        Triple(Screen.Dashboard, "Home", Icons.Default.Home),
                         Triple(Screen.Stocks, "Stocks", Icons.Default.TrendingUp),
-                        Triple(Screen.Analysis, "Audit", Icons.Default.Analytics),
+                        Triple(Screen.Portfolio, "Portfolio", Icons.Default.AccountBalanceWallet),
                         Triple(Screen.IdeaCards, "Ideas", Icons.Default.Lightbulb),
                         Triple(Screen.Learning, "Academy", Icons.Default.School),
                         Triple(Screen.Rss, "RSS", Icons.Default.RssFeed),
@@ -111,7 +117,7 @@ fun IgentAppShell(initialTargetScreen: String? = null) {
             composable(Screen.Auth.route) {
                 AuthScreen(
                     onNavigateToMain = {
-                        navController.navigate(Screen.Chat.route) {
+                        navController.navigate(Screen.Dashboard.route) {
                             popUpTo(Screen.Auth.route) { inclusive = true }
                         }
                     },
@@ -122,11 +128,27 @@ fun IgentAppShell(initialTargetScreen: String? = null) {
                     }
                 )
             }
+            composable(Screen.Dashboard.route) {
+                DashboardScreen(
+                    onNavigateToStocks = { navController.navigate(Screen.Stocks.route) },
+                    onNavigateToCheckup = { navController.navigate(Screen.StockCheckup.route) },
+                    onNavigateToPortfolio = { navController.navigate(Screen.Portfolio.route) },
+                    onNavigateToScreener = { navController.navigate(Screen.Screener.route) },
+                    onNavigateToIdeaCards = { navController.navigate(Screen.IdeaCards.route) },
+                    onNavigateToAcademy = { navController.navigate(Screen.Learning.route) },
+                    onNavigateToRss = { navController.navigate(Screen.Rss.route) }
+                )
+            }
             composable(Screen.Chat.route) { ChatScreen() }
             composable(Screen.Stocks.route) { PsxScreen() }
+            composable(Screen.StockCheckup.route) { StockCheckupScreen() }
+            composable(Screen.Portfolio.route) { PortfolioLedgerScreen() }
+            composable(Screen.Screener.route) { ScreenerScreen() }
             composable(Screen.Analysis.route) { FinancialAnalysisScreen() }
             composable(Screen.IdeaCards.route) { IdeaCardsScreen() }
             composable(Screen.Learning.route) { LearningScreen() }
+            composable(Screen.Quiz.route) { QuizScreen(onNavigateBack = { navController.popBackStack() }) }
+            composable(Screen.PracticeBook.route) { PracticeBookScreen() }
             composable(Screen.Rss.route) { RssScreen() }
             composable(Screen.Settings.route) {
                 SettingsHubScreen(

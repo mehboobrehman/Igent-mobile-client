@@ -2,25 +2,8 @@ package com.igent.mobile.data.local
 
 import androidx.room.Database
 import androidx.room.RoomDatabase
-import com.igent.mobile.data.local.dao.LogDao
-import com.igent.mobile.data.local.dao.SnapshotDao
-import com.igent.mobile.data.local.entity.LogEntity
-import com.igent.mobile.data.local.entity.SnapshotEntity
-import com.igent.mobile.data.local.dao.CourseDao
-import com.igent.mobile.data.local.entity.CourseEntity
-import com.igent.mobile.data.local.entity.CourseModuleEntity
-import com.igent.mobile.data.local.entity.QuizEntity
-import com.igent.mobile.data.local.entity.QuizScoreEntity
-import com.igent.mobile.data.local.dao.FeedItemDao
-import com.igent.mobile.data.local.dao.IdeaCardDao
-import com.igent.mobile.data.local.dao.MessageDao
-import com.igent.mobile.data.local.dao.StockDao
-import com.igent.mobile.data.local.dao.WeeklySummaryDao
-import com.igent.mobile.data.local.entity.FeedItemEntity
-import com.igent.mobile.data.local.entity.IdeaCardEntity
-import com.igent.mobile.data.local.entity.MessageEntity
-import com.igent.mobile.data.local.entity.StockEntity
-import com.igent.mobile.data.local.entity.WeeklySummaryEntity
+import com.igent.mobile.data.local.dao.*
+import com.igent.mobile.data.local.entity.*
 
 @Database(
     entities = [
@@ -34,9 +17,12 @@ import com.igent.mobile.data.local.entity.WeeklySummaryEntity
         QuizEntity::class,
         QuizScoreEntity::class,
         LogEntity::class,
-        SnapshotEntity::class
+        SnapshotEntity::class,
+        SensorRunEntity::class,
+        PortfolioTransactionEntity::class,
+        WatchlistEntity::class
     ],
-    version = 5,
+    version = 7,
     exportSchema = false
 )
 abstract class IgentDatabase : RoomDatabase() {
@@ -48,6 +34,9 @@ abstract class IgentDatabase : RoomDatabase() {
     abstract fun courseDao(): CourseDao
     abstract fun logDao(): LogDao
     abstract fun snapshotDao(): SnapshotDao
+    abstract fun sensorRunDao(): SensorRunDao
+    abstract fun portfolioDao(): PortfolioDao
+    abstract fun watchlistDao(): WatchlistDao
 
     companion object {
         const val DATABASE_NAME = "igent_database"

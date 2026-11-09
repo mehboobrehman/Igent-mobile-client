@@ -174,7 +174,7 @@ fun AuthScreen(
                         } else {
                             Icon(Icons.Default.Save, contentDescription = null)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Save & Obfuscate API Keys")
+                            Text("Save & Encrypt API Keys")
                         }
                     }
                 }

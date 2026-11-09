@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.kotlin.kapt)
     alias(libs.plugins.hilt.android)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.room)
 }
 
 android {
@@ -92,7 +93,7 @@ android {
         val variant = this
         variant.outputs.all {
             val output = this as com.android.build.gradle.internal.api.BaseVariantOutputImpl
-            output.outputFileName = "Igent-${variant.name}.apk"
+            output.outputFileName = "Igent-${variant.name}-v${variant.versionName}.apk"
         }
     }
 
@@ -108,6 +109,11 @@ android {
         }
     }
 }
+
+    room {
+        schemaDirectory("$projectDir/schemas")
+    }
+
 
 dependencies {
     implementation(libs.androidx.core.ktx)
@@ -149,6 +155,7 @@ dependencies {
     implementation("androidx.work:work-runtime-ktx:2.9.0")
     implementation("androidx.browser:browser:1.8.0")
     implementation(libs.androidx.material.icons.extended)
+    implementation(libs.jsoup)
     implementation("androidx.hilt:hilt-work:1.2.0")
     kapt("androidx.hilt:hilt-compiler:1.2.0")
     kapt(libs.androidx.hilt.compiler)

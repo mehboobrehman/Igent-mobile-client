@@ -90,6 +90,18 @@ object DatabaseModule {
     fun provideLogDao(database: IgentDatabase): LogDao {
         return database.logDao()
     }
+
+    @Provides
+    @Singleton
+    fun providePortfolioDao(database: IgentDatabase): com.igent.mobile.data.local.dao.PortfolioDao {
+        return database.portfolioDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideWatchlistDao(database: IgentDatabase): com.igent.mobile.data.local.dao.WatchlistDao {
+        return database.watchlistDao()
+    }
 }
 
 @Module
@@ -150,4 +162,22 @@ abstract class RepositoryModule {
     abstract fun bindWeeklySummaryRepository(
         weeklySummaryRepositoryImpl: WeeklySummaryRepositoryImpl
     ): WeeklySummaryRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindPortfolioRepository(
+        portfolioRepositoryImpl: com.igent.mobile.data.repository.PortfolioRepositoryImpl
+    ): com.igent.mobile.domain.repository.PortfolioRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindWatchlistRepository(
+        watchlistRepositoryImpl: com.igent.mobile.data.repository.WatchlistRepositoryImpl
+    ): com.igent.mobile.domain.repository.WatchlistRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindCompanyRepository(
+        companyRepositoryImpl: com.igent.mobile.data.repository.CompanyRepositoryImpl
+    ): com.igent.mobile.domain.repository.CompanyRepository
 }

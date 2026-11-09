@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.igent.mobile.domain.model.FinancialAnalysisResult
 import com.igent.mobile.domain.model.FinancialAnalysisType
+import com.igent.mobile.ui.components.DisclaimerComponent
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -192,6 +193,8 @@ fun FinancialAnalysisScreen(
                     AnalysisResultCard(result = result)
                 }
             }
+
+            DisclaimerComponent()
         }
     }
 }

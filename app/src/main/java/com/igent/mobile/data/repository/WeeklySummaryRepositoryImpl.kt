@@ -34,7 +34,7 @@ class WeeklySummaryRepositoryImpl @Inject constructor(
         val calendar = Calendar.getInstance()
         val year = calendar.get(Calendar.YEAR)
         val weekNum = calendar.get(Calendar.WEEK_OF_YEAR)
-        val currentWeekId = "$year-W$weekNum"
+        val currentWeekId = String.format(Locale.US, "%d-W%02d", year, weekNum)
 
         val existing = weeklySummaryDao.getWeeklySummary(currentWeekId)
         if (existing != null) {
@@ -55,17 +55,13 @@ class WeeklySummaryRepositoryImpl @Inject constructor(
         val topSymbols = stocks.sortedByDescending { it.percentChange }
             .take(3)
             .map { "${it.symbol} (+${it.percentChange}%)" }
-            .ifEmpty { listOf("LUCK (+3.2%)", "ENGRO (+2.8%)", "OGDC (+1.9%)") }
 
         val summaryText = buildString {
             appendLine("PSX Weekly Market Review ($currentWeekId):")
             appendLine("The Pakistan Stock Exchange experienced a $marketTrend trend this week.")
             if (stocks.isNotEmpty()) {
                 appendLine("Tracked Equities: ${stocks.size} companies. Advance/Decline ratio: $gainersCount advances vs $losersCount declines.")
-            } else {
-                appendLine("Key sector movers included Banking (MCB, HBL), Fertilizer (ENGRO, FERT), and Cement (LUCK, CHCC).")
             }
-            appendLine("Investor sentiment remains driven by corporate earnings releases, State Bank monetary policy updates, and foreign institutional inflows.")
         }
 
         val topPicksJson = topSymbols.joinToString(", ")

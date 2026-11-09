@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.igent.mobile.data.local.entity.IdeaCardEntity
 import com.igent.mobile.data.local.entity.WeeklySummaryEntity
+import com.igent.mobile.ui.components.DisclaimerComponent
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -75,6 +76,8 @@ fun IdeaCardsScreen(
                     WeeklySummariesList(summaries = uiState.summaries)
                 }
             }
+
+            DisclaimerComponent()
         }
     }
 }

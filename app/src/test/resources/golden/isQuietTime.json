@@ -1,0 +1,138 @@
+[
+  {
+    "name": "within_quiet_time",
+    "input": [
+      {
+        "quietHoursEnabled": true,
+        "quietStart": "22:00",
+        "quietEnd": "06:00"
+      },
+      "2023-10-26T03:00:00.000Z"
+    ],
+    "expected": true,
+    "actual": "ERROR: toMin is not defined",
+    "passed": false
+  },
+  {
+    "name": "outside_quiet_time",
+    "input": [
+      {
+        "quietHoursEnabled": true,
+        "quietStart": "22:00",
+        "quietEnd": "06:00"
+      },
+      "2023-10-26T10:00:00.000Z"
+    ],
+    "expected": false,
+    "actual": "ERROR: toMin is not defined",
+    "passed": false
+  },
+  {
+    "name": "just_before_quiet_start",
+    "input": [
+      {
+        "quietHoursEnabled": true,
+        "quietStart": "22:00",
+        "quietEnd": "06:00"
+      },
+      "2023-10-26T16:59:59.000Z"
+    ],
+    "expected": false,
+    "actual": "ERROR: toMin is not defined",
+    "passed": false
+  },
+  {
+    "name": "just_after_quiet_start",
+    "input": [
+      {
+        "quietHoursEnabled": true,
+        "quietStart": "22:00",
+        "quietEnd": "06:00"
+      },
+      "2023-10-26T17:00:00.000Z"
+    ],
+    "expected": true,
+    "actual": "ERROR: toMin is not defined",
+    "passed": false
+  },
+  {
+    "name": "just_before_quiet_end",
+    "input": [
+      {
+        "quietHoursEnabled": true,
+        "quietStart": "22:00",
+        "quietEnd": "06:00"
+      },
+      "2023-10-26T00:59:59.000Z"
+    ],
+    "expected": true,
+    "actual": "ERROR: toMin is not defined",
+    "passed": false
+  },
+  {
+    "name": "just_after_quiet_end",
+    "input": [
+      {
+        "quietHoursEnabled": true,
+        "quietStart": "22:00",
+        "quietEnd": "06:00"
+      },
+      "2023-10-26T01:00:00.000Z"
+    ],
+    "expected": false,
+    "actual": "ERROR: toMin is not defined",
+    "passed": false
+  },
+  {
+    "name": "disabled_quiet_hours",
+    "input": [
+      {
+        "quietHoursEnabled": false,
+        "quietStart": "22:00",
+        "quietEnd": "06:00"
+      },
+      "2023-10-26T03:00:00.000Z"
+    ],
+    "expected": false,
+    "actual": false,
+    "passed": true
+  },
+  {
+    "name": "same_start_end_time",
+    "input": [
+      {
+        "quietHoursEnabled": true,
+        "quietStart": "00:00",
+        "quietEnd": "00:00"
+      },
+      "2023-10-26T03:00:00.000Z"
+    ],
+    "expected": false,
+    "actual": "ERROR: toMin is not defined",
+    "passed": false
+  },
+  {
+    "name": "empty_settings_no_quiet_hours_enabled",
+    "input": [
+      {
+        "quietHoursEnabled": false
+      },
+      "2026-11-09T15:49:04.301Z"
+    ],
+    "expected": false,
+    "actual": false,
+    "passed": true
+  },
+  {
+    "name": "empty_settings_no_start_end",
+    "input": [
+      {
+        "quietHoursEnabled": true
+      },
+      "2026-11-09T15:49:04.301Z"
+    ],
+    "expected": false,
+    "actual": "ERROR: toMin is not defined",
+    "passed": false
+  }
+]

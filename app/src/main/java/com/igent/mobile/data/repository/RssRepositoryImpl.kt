@@ -19,9 +19,11 @@ class RssRepositoryImpl @Inject constructor(
 ) : RssRepository {
 
     private val defaultFeedUrls = listOf(
+        "https://propakistani.pk/feed/",
         "https://www.brecorder.com/feeds/latest-news",
-        "https://feeds.feedburner.com/oreilly/radar/atom",
-        "https://rss.nytimes.com/services/xml/rss/nyt/Technology.xml"
+        "https://www.dawn.com/feeds/business",
+        "https://tribune.com.pk/feed/business",
+        "https://news.google.com/rss/search?q=site%3Amettisglobal.news&hl=en-PK&gl=PK&ceid=PK:en"
     )
 
     override suspend fun getFeedItems(): Result<List<FeedItem>> {
@@ -35,29 +37,7 @@ class RssRepositoryImpl @Inject constructor(
             if (cached.isNotEmpty()) {
                 Result.success(cached.map { it.toDomain() })
             } else {
-                // Fallback sample items if network/parse yielded nothing
-                val sampleItems = listOf(
-                    FeedItem(
-                        id = "1",
-                        title = "PSX Hits Record High Amid Strong Economic Indicators",
-                        description = "The Pakistan Stock Exchange saw unprecedented volumes today as investors cheered positive fiscal updates.",
-                        link = "https://example.com/news/1",
-                        pubDate = "2026-10-24 10:00:00",
-                        source = "Business Recorder",
-                        imageUrl = null
-                    ),
-                    FeedItem(
-                        id = "2",
-                        title = "Tech Sector Leads Growth in Mobile AI Integration",
-                        description = "Local developers are rapidly adopting AI-driven clients for mobile productivity and data analytics.",
-                        link = "https://example.com/news/2",
-                        pubDate = "2026-10-24 09:30:00",
-                        source = "TechInAsia",
-                        imageUrl = null
-                    )
-                )
-                feedItemDao.insertFeedItems(sampleItems.map { FeedItemEntity.fromDomain(it) })
-                Result.success(sampleItems)
+                Result.failure(Exception("No financial feeds available. Please check your network connection."))
             }
         } catch (e: Exception) {
             // Fallback to cached items on error
@@ -80,10 +60,12 @@ class RssRepositoryImpl @Inject constructor(
                         val bodyString = response.body()?.string()
                         if (!bodyString.isNullOrBlank()) {
                             val sourceName = when {
+                                url.contains("propakistani") -> "ProPakistani"
                                 url.contains("brecorder") -> "Business Recorder"
-                                url.contains("oreilly") -> "O'Reilly Radar"
-                                url.contains("nytimes") -> "NYT Technology"
-                                else -> "RSS Feed"
+                                url.contains("dawn.com") -> "Dawn Business"
+                                url.contains("tribune.com.pk") -> "Express Tribune"
+                                url.contains("mettisglobal") -> "Mettis Global"
+                                else -> "Financial News"
                             }
                             val parsedItems = rssParser.parse(bodyString, sourceName)
                             if (parsedItems.isNotEmpty()) {
@@ -96,7 +78,7 @@ class RssRepositoryImpl @Inject constructor(
                     // Ignore individual feed fetch failure and try others
                 }
             }
-            if (fetchedAny || defaultFeedUrls.isNotEmpty()) {
+            if (fetchedAny) {
                 Result.success(Unit)
             } else {
                 Result.failure(Exception("Failed to fetch any RSS feeds"))

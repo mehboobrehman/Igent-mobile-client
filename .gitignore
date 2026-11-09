@@ -10,3 +10,4 @@ app/build/
 local.properties
 gradle.properties
 Igent-1.0.7-portable/
+Igent-*.apk
