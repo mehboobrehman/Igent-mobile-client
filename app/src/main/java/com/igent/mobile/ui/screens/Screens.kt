@@ -277,6 +277,8 @@ fun SettingsHubScreen(
                 }
             }
 
+            com.igent.mobile.ui.update.UpdateSection()
+
             Spacer(modifier = Modifier.weight(1f))
 
             Box(
