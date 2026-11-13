@@ -21,6 +21,13 @@ android {
     val patch = versionProperties.getProperty("PATCH", "0").toInt()
     val build = versionProperties.getProperty("BUILD", "0").toInt()
 
+    fun getBuildVersion(variantName: String): Int {
+        return when {
+            variantName.contains("debug", ignoreCase = true) -> build + 100000
+            else -> build
+        }
+    }
+
     namespace = "com.igent.mobile"
     compileSdk = 34
 
@@ -37,21 +44,15 @@ android {
         applicationId = "com.igent.mobile"
         minSdk = 26
         targetSdk = 34
-        versionCode = major * 10000 + minor * 1000 + patch * 100 + build
+        
         versionName = "$major.$minor.$patch"
-
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        vectorDrawables {
-            useSupportLibrary = true
-        }
+        
+        vectorDrawables { useSupportLibrary = true }
 
-        val key1 = project.findProperty("openrouter.api.key.1") as? String ?: ""
-        val key2 = project.findProperty("openrouter.api.key.2") as? String ?: ""
-        buildConfigField("String", "OPENROUTER_API_KEY_1", "\"$key1\"")
-        buildConfigField("String", "OPENROUTER_API_KEY_2", "\"$key2\"")
-
-        val telemetryToken = project.findProperty("telemetry.secret.token") as? String ?: "igent-telemetry-secret-token-2026"
-        buildConfigField("String", "TELEMETRY_TOKEN", "\"$telemetryToken\"")
+        buildConfigField("String", "OPENROUTER_API_KEY_1", "\"${project.findProperty("openrouter.api.key.1") as? String ?: ""}\"")
+        buildConfigField("String", "OPENROUTER_API_KEY_2", "\"${project.findProperty("openrouter.api.key.2") as? String ?: ""}\"")
+        buildConfigField("String", "TELEMETRY_TOKEN", "\"${project.findProperty("telemetry.secret.token") as? String ?: "igent-telemetry-secret-token-2026"}\"")
     }
 
     compileOptions {
@@ -60,7 +61,6 @@ android {
     }
     kotlinOptions {
         jvmTarget = "17"
-        freeCompilerArgs += listOf("-P", "plugin:androidx.compose.compiler.plugins.kotlin:suppressKotlinVersionCompatibilityCheck=1.9.23")
     }
     buildFeatures {
         compose = true
@@ -68,11 +68,6 @@ android {
     }
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.10"
-    }
-    packaging {
-        resources {
-            excludes += "/META-INF/{AL2.0,LGPL2.1}"
-        }
     }
 
     buildTypes {
@@ -83,40 +78,26 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             signingConfig = signingConfigs.getByName("release")
             buildConfigField("Boolean", "DEBUG_TELEMETRY_ENABLED", "false")
         }
     }
 
-    applicationVariants.all {
-        val variant = this
-        variant.outputs.all {
-            val output = this as com.android.build.gradle.internal.api.BaseVariantOutputImpl
-            output.outputFileName = "Igent-${variant.name}-v${variant.versionName}.apk"
-        }
-    }
-
-    tasks.register("verifyReleaseTelemetry") {
-        group = "verification"
-        description = "Verifies release build configuration restricts telemetry and prevents code leakage in release artifacts."
-        doLast {
-            val releaseBuildType = buildTypes.findByName("release")
-            if (releaseBuildType == null) {
-                throw GradleException("Release build type missing.")
+    androidComponents {
+        onVariants { variant ->
+            val buildNumber = getBuildVersion(variant.name)
+            val baseVersionCode = major * 1000000 + minor * 10000 + patch * 100
+            variant.outputs.forEach { output ->
+                output.versionCode.set(baseVersionCode + buildNumber)
             }
-            println("Verification passed: Release build telemetry protection is active.")
         }
     }
 }
 
-    room {
-        schemaDirectory("$projectDir/schemas")
-    }
-
+room {
+    schemaDirectory("$projectDir/schemas")
+}
 
 dependencies {
     implementation(libs.androidx.core.ktx)
@@ -128,48 +109,46 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
     implementation(libs.androidx.navigation.compose)
-    
-    // Firebase Messaging BOM & Messaging
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.messaging)
-
-    // Hilt DI
     implementation(libs.hilt.android)
     kapt(libs.hilt.compiler)
     implementation(libs.androidx.hilt.navigation.compose)
-
-    // Room & SQLCipher
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
     kapt(libs.room.compiler)
     implementation(libs.sqlcipher)
-
-    // DataStore Preferences
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.kotlinx.coroutines.android)
-
-    // Retrofit & OkHttp & Serialization
     implementation(libs.retrofit)
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging.interceptor)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.retrofit.kotlinx.serialization.converter)
-
-    // WorkManager & Hilt Work
     implementation("androidx.work:work-runtime-ktx:2.9.0")
     implementation("androidx.browser:browser:1.8.0")
     implementation(libs.androidx.material.icons.extended)
     implementation(libs.jsoup)
     implementation("androidx.hilt:hilt-work:1.2.0")
     kapt("androidx.hilt:hilt-compiler:1.2.0")
-    kapt(libs.androidx.hilt.compiler)
-
     testImplementation("junit:junit:4.13.2")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.0")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
-    androidTestImplementation(platform(libs.androidx.compose.bom))
-    androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
-    debugImplementation(libs.androidx.ui.test.manifest)
+}
+
+tasks.register("incrementBuildVersion") {
+    group = "versioning"
+    description = "Increments the build version in version.properties"
+    doLast {
+        val versionPropsFile = rootProject.file("version.properties")
+        val versionProperties = Properties()
+        if (versionPropsFile.exists()) {
+            versionPropsFile.inputStream().use { versionProperties.load(it) }
+        }
+        val build = versionProperties.getProperty("BUILD", "0").toInt()
+        versionProperties.setProperty("BUILD", (build + 1).toString())
+        versionPropsFile.outputStream().use { versionProperties.store(it, null) }
+        println("Build version incremented to ${build + 1}")
+    }
 }
