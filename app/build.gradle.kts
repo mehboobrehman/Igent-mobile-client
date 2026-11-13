@@ -138,10 +138,11 @@ dependencies {
     kapt(libs.hilt.compiler)
     implementation(libs.androidx.hilt.navigation.compose)
 
-    // Room
+    // Room & SQLCipher
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
     kapt(libs.room.compiler)
+    implementation(libs.sqlcipher)
 
     // DataStore Preferences
     implementation(libs.androidx.datastore.preferences)

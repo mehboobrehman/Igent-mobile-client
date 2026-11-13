@@ -25,28 +25,74 @@ import com.igent.mobile.data.service.MarketDataContextBuilderImpl
 import com.igent.mobile.domain.repository.IdeaCardRepository
 import com.igent.mobile.domain.repository.WeeklySummaryRepository
 import com.igent.mobile.domain.service.MarketDataContextBuilder
+import com.igent.mobile.data.util.KeyObfuscator
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import net.sqlcipher.database.SQLiteDatabase
+import net.sqlcipher.database.SupportFactory
+import java.security.SecureRandom
+import android.util.Base64
 import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
 
+    private const val SECURE_DB_PREFS = "igent_secure_db_prefs"
+    private const val PREF_DB_PASSPHRASE = "db_passphrase_obfuscated"
+
+    private fun getOrCreatePassphrase(context: Context): ByteArray {
+        val prefs = context.getSharedPreferences(SECURE_DB_PREFS, Context.MODE_PRIVATE)
+        val obfuscated = prefs.getString(PREF_DB_PASSPHRASE, null)
+        
+        val plainPassphrase = if (!obfuscated.isNullOrBlank()) {
+            try {
+                KeyObfuscator.deobfuscate(obfuscated)
+            } catch (e: Exception) {
+                ""
+            }
+        } else {
+            ""
+        }
+
+        if (plainPassphrase.isNotBlank()) {
+            return SQLiteDatabase.getBytes(plainPassphrase.toCharArray())
+        }
+
+        val secureRandom = SecureRandom()
+        val randomBytes = ByteArray(32)
+        secureRandom.nextBytes(randomBytes)
+        val newPlainPassphrase = Base64.encodeToString(randomBytes, Base64.NO_WRAP)
+
+        try {
+            val newObfuscated = KeyObfuscator.obfuscate(newPlainPassphrase)
+            prefs.edit().putString(PREF_DB_PASSPHRASE, newObfuscated).apply()
+        } catch (e: Exception) {
+            // Fallback or ignore if KeyStore fails
+        }
+
+        return SQLiteDatabase.getBytes(newPlainPassphrase.toCharArray())
+    }
+
     @Provides
     @Singleton
     fun provideIgentDatabase(
         @ApplicationContext context: Context
     ): IgentDatabase {
+        val passphraseBytes = getOrCreatePassphrase(context)
+        val factory = SupportFactory(passphraseBytes)
         return Room.databaseBuilder(
             context,
             IgentDatabase::class.java,
             IgentDatabase.DATABASE_NAME
-        ).fallbackToDestructiveMigration().build()
+        )
+            .openHelperFactory(factory)
+            .fallbackToDestructiveMigration()
+            .build()
     }
 
     @Provides
