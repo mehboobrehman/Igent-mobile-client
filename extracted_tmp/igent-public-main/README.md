@@ -1,2 +1,0 @@
-# igent-public
-Igent App
