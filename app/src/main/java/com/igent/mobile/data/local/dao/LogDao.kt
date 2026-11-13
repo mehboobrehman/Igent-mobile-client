@@ -31,4 +31,7 @@ interface LogDao {
 
     @Query("DELETE FROM agent_logs WHERE id IN (SELECT id FROM agent_logs WHERE isSynced = 0 ORDER BY timestamp ASC LIMIT :limit)")
     suspend fun deleteOldestLogs(limit: Int)
+
+    @Query("DELETE FROM agent_logs WHERE isSynced = 1")
+    suspend fun deleteSyncedLogs()
 }

@@ -90,6 +90,7 @@ class TelemetrySyncWorker @AssistedInject constructor(
 
             if (syncedIds.isNotEmpty()) {
                 logDao.markAsSynced(syncedIds)
+                logDao.deleteSyncedLogs()
                 Log.d(TAG, "Successfully synced ${syncedIds.size} logs")
             }
 
