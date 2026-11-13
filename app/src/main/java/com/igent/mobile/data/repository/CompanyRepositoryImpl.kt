@@ -5,6 +5,7 @@ import com.igent.mobile.domain.repository.CompanyRepository
 import com.igent.mobile.domain.repository.PsxRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.math.BigDecimal
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -22,10 +23,10 @@ class CompanyRepositoryImpl @Inject constructor(
                     symbol = stock.symbol,
                     name = stock.name,
                     sector = "PSX Equity",
-                    marketCap = stock.price * 1e8, // estimated market cap
-                    freeFloatPct = 25.0,
-                    eps = 5.0,
-                    pe = 10.0,
+                    marketCap = stock.price.multiply(BigDecimal("100000000")),
+                    freeFloatPct = BigDecimal("25.0"),
+                    eps = BigDecimal("5.0"),
+                    pe = BigDecimal("10.0"),
                     w52High = stock.high,
                     w52Low = stock.low,
                     kse100 = true
@@ -45,10 +46,10 @@ class CompanyRepositoryImpl @Inject constructor(
                     symbol = stock.symbol,
                     name = stock.name,
                     sector = "PSX Equity",
-                    marketCap = stock.price * 1e8,
-                    freeFloatPct = 25.0,
-                    eps = 5.0,
-                    pe = 10.0,
+                    marketCap = stock.price.multiply(BigDecimal("100000000")),
+                    freeFloatPct = BigDecimal("25.0"),
+                    eps = BigDecimal("5.0"),
+                    pe = BigDecimal("10.0"),
                     w52High = stock.high,
                     w52Low = stock.low,
                     kse100 = true

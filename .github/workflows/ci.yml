@@ -46,6 +46,19 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Verify Release Telemetry & Gradle Build
-        run: |
-          ./gradlew verifyReleaseTelemetry
+      - name: Android Unit Tests
+        run: ./gradlew testDebugUnitTest
+
+      - name: Lint
+        run: ./gradlew lint
+
+      - name: Release Build Verification
+        run: ./gradlew assembleRelease
+
+      # Potential integration point for secret scanning or dependency review tools
+      # Example: 
+      # - name: Run Snyk
+      #   uses: snyk/actions/gradle@master
+      #   with:
+      #     token: ${{ secrets.SNYK_TOKEN }}
+

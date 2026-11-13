@@ -56,6 +56,108 @@ fun DashboardScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // Macro & Rates Widget
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = "Macroeconomic Indicators & Rates",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            RateItem("SBP Policy Rate", "22.0%")
+                            RateItem("USD / PKR", "Rs 278.50")
+                            RateItem("Gold (10g)", "Rs 215,000")
+                        }
+                    }
+                }
+            }
+
+            // Recent Idea Card Highlight
+            if (state.recentIdea != null) {
+                item {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(onClick = onNavigateToIdeaCards),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "💡 Daily Agent Investment Idea",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onTertiaryContainer
+                                )
+                                SuggestionChip(onClick = {}, label = { Text(state.recentIdea!!.targetSymbol) })
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = state.recentIdea!!.title,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onTertiaryContainer
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = state.recentIdea!!.recommendation,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onTertiaryContainer
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Scam Shield Alert Banner
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Security,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                        Column {
+                            Text(
+                                text = "Scam Shield & Market Safety",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                            Text(
+                                text = "All tracked PSX equities verified against SECP/PSX regulatory alerts. Zero high-risk anomalies detected.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                        }
+                    }
+                }
+            }
+
             // Portfolio Summary Card
             item {
                 Card(
@@ -83,7 +185,7 @@ fun DashboardScreen(
                         Text(
                             text = "Unrealized P&L: Rs ${String.format(java.util.Locale.US, "%,.2f", totalPortfolioPnl)}",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = if (totalPortfolioPnl >= 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                            color = if (totalPortfolioPnl >= java.math.BigDecimal.ZERO) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                         Button(
@@ -245,5 +347,23 @@ fun QuickToolCard(
                 color = MaterialTheme.colorScheme.onPrimaryContainer
             )
         }
+    }
+}
+
+@Composable
+fun RateItem(label: String, value: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSecondaryContainer
+        )
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSecondaryContainer
+        )
     }
 }

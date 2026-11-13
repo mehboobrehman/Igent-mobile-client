@@ -10,6 +10,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import java.math.BigDecimal
+import java.math.RoundingMode
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -22,33 +24,33 @@ class PortfolioRepositoryImpl @Inject constructor(
 
     override fun getHoldings(): Flow<List<PortfolioHolding>> {
         return portfolioDao.getTransactions().map { entities ->
-            // Group transactions by symbol to calculate holdings
-            val map = mutableMapOf<String, Triple<Double, Double, Double>>() // symbol -> (totalQty, totalCost, lastPrice)
+            val map = mutableMapOf<String, Triple<BigDecimal, BigDecimal, BigDecimal>>() // symbol -> (totalQty, totalCost, lastPrice)
             val stocks = psxRepository.getStocks().getOrDefault(emptyList())
             val priceMap = stocks.associate { it.symbol to it.price }
 
             for (tx in entities) {
-                val current = map[tx.symbol] ?: Triple(0.0, 0.0, priceMap[tx.symbol] ?: tx.price)
+                val currentPrice = priceMap[tx.symbol] ?: tx.price
+                val current = map[tx.symbol] ?: Triple(BigDecimal.ZERO, BigDecimal.ZERO, currentPrice)
                 if (tx.type.uppercase() == "BUY") {
-                    val newQty = current.first + tx.quantity
-                    val newCost = current.second + (tx.quantity * tx.price)
+                    val newQty = current.first.add(tx.quantity)
+                    val newCost = current.second.add(tx.quantity.multiply(tx.price))
                     map[tx.symbol] = Triple(newQty, newCost, current.third)
                 } else {
-                    val newQty = maxOf(0.0, current.first - tx.quantity)
-                    val avgCost = if (current.first > 0) current.second / current.first else 0.0
-                    val newCost = newQty * avgCost
+                    val newQty = current.first.subtract(tx.quantity).max(BigDecimal.ZERO)
+                    val avgCost = if (current.first > BigDecimal.ZERO) current.second.divide(current.first, 4, RoundingMode.HALF_UP) else BigDecimal.ZERO
+                    val newCost = newQty.multiply(avgCost)
                     map[tx.symbol] = Triple(newQty, newCost, current.third)
                 }
             }
 
-            map.filter { it.value.first > 0.0 }.map { (symbol, triple) ->
+            map.filter { it.value.first > BigDecimal.ZERO }.map { (symbol, triple) ->
                 val qty = triple.first
                 val totalCost = triple.second
-                val avgPrice = if (qty > 0) totalCost / qty else 0.0
+                val avgPrice = if (qty > BigDecimal.ZERO) totalCost.divide(qty, 4, RoundingMode.HALF_UP) else BigDecimal.ZERO
                 val currPrice = priceMap[symbol] ?: avgPrice
-                val totalVal = qty * currPrice
-                val pnl = totalVal - totalCost
-                val pnlPct = if (totalCost > 0) (pnl / totalCost) * 100.0 else 0.0
+                val totalVal = qty.multiply(currPrice)
+                val pnl = totalVal.subtract(totalCost)
+                val pnlPct = if (totalCost > BigDecimal.ZERO) pnl.divide(totalCost, 4, RoundingMode.HALF_UP).multiply(BigDecimal("100")) else BigDecimal.ZERO
                 val stockName = stocks.find { it.symbol == symbol }?.name ?: symbol
 
                 PortfolioHolding(
@@ -86,8 +88,8 @@ class PortfolioRepositoryImpl @Inject constructor(
                 id = UUID.randomUUID().toString(),
                 symbol = symbol.uppercase(),
                 type = type.uppercase(),
-                quantity = quantity,
-                price = price,
+                quantity = BigDecimal.valueOf(quantity),
+                price = BigDecimal.valueOf(price),
                 timestamp = System.currentTimeMillis()
             )
             portfolioDao.insertTransaction(entity)

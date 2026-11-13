@@ -17,12 +17,12 @@ class AuthInterceptor @Inject constructor(
 
     override fun intercept(chain: Interceptor.Chain): Response {
         val originalRequest = chain.request()
-        val url = originalRequest.url.toString()
+        val requestUrl = originalRequest.url
+        val host = requestUrl.host
+        val urlStr = requestUrl.toString()
 
-        // Determine request type and inject appropriate token/credentials
         val requestBuilder = originalRequest.newBuilder()
 
-        // Check if request is for OpenRouter or Groq
         val rawApiKey = runBlocking {
             try {
                 preferencesDataSource.apiKey.first()
@@ -31,32 +31,28 @@ class AuthInterceptor @Inject constructor(
             }
         }
 
-        val apiKey = KeyObfuscator.deobfuscate(rawApiKey).ifBlank { rawApiKey }
+        val apiKey = try {
+            com.igent.mobile.data.util.KeyObfuscator.deobfuscate(rawApiKey).ifBlank { rawApiKey }
+        } catch (e: Exception) {
+            rawApiKey
+        }
 
-        if (url.contains("openrouter.ai") || url.contains("api.groq.com")) {
-            if (apiKey.isNotBlank()) {
-                val authHeaderValue = if (url.contains("openrouter.ai")) {
-                    if (apiKey.startsWith("Bearer ")) apiKey else "Bearer $apiKey"
-                } else {
-                    if (apiKey.startsWith("Bearer ")) apiKey else "Bearer $apiKey"
-                }
-                requestBuilder.header("Authorization", authHeaderValue)
-            }
-        } else {
-            // General or other authenticated requests (e.g. PSX or custom endpoints)
-            if (apiKey.isNotBlank()) {
-                requestBuilder.header("X-API-Key", apiKey)
-            }
+        val isOpenRouterOrGroq = host.equals("openrouter.ai", ignoreCase = true) ||
+                host.endsWith(".openrouter.ai", ignoreCase = true) ||
+                host.equals("api.groq.com", ignoreCase = true) ||
+                host.endsWith(".api.groq.com", ignoreCase = true)
+
+        if (isOpenRouterOrGroq && apiKey.isNotBlank()) {
+            val authHeaderValue = if (apiKey.startsWith("Bearer ")) apiKey else "Bearer $apiKey"
+            requestBuilder.header("Authorization", authHeaderValue)
+            requestBuilder.header("X-API-Key", apiKey)
         }
 
         val response = chain.proceed(requestBuilder.build())
-        val urlStr = originalRequest.url.toString()
 
         // Handle 401 Unauthorized globally for app backend endpoints ONLY.
         // External third-party requests (OpenRouter, Groq, Pollinations) should NOT clear session on 401.
-        val isExternal = urlStr.contains("openrouter.ai") || 
-                        urlStr.contains("api.groq.com") || 
-                        urlStr.contains("pollinations.ai")
+        val isExternal = isOpenRouterOrGroq || urlStr.contains("pollinations.ai")
 
         if (response.code == 401 && !isExternal) {
             sessionManager.handleUnauthorized()

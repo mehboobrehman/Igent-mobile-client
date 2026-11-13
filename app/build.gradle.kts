@@ -49,6 +49,9 @@ android {
         val key2 = project.findProperty("openrouter.api.key.2") as? String ?: ""
         buildConfigField("String", "OPENROUTER_API_KEY_1", "\"$key1\"")
         buildConfigField("String", "OPENROUTER_API_KEY_2", "\"$key2\"")
+
+        val telemetryToken = project.findProperty("telemetry.secret.token") as? String ?: "igent-telemetry-secret-token-2026"
+        buildConfigField("String", "TELEMETRY_TOKEN", "\"$telemetryToken\"")
     }
 
     compileOptions {

@@ -2,6 +2,7 @@ package com.igent.mobile.data.local
 
 import androidx.room.Database
 import androidx.room.RoomDatabase
+import androidx.room.TypeConverters
 import com.igent.mobile.data.local.dao.*
 import com.igent.mobile.data.local.entity.*
 
@@ -25,6 +26,7 @@ import com.igent.mobile.data.local.entity.*
     version = 7,
     exportSchema = false
 )
+@TypeConverters(Converters::class)
 abstract class IgentDatabase : RoomDatabase() {
     abstract fun messageDao(): MessageDao
     abstract fun stockDao(): StockDao

@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import java.math.BigDecimal
 
 data class ScreenerUiState(
     val isLoading: Boolean = false,
@@ -46,7 +47,7 @@ class ScreenerViewModel @Inject constructor(
             val result = runScreenerUseCase(_uiState.value.maxPe, _uiState.value.minGain)
             result.fold(
                 onSuccess = { stocks ->
-                    val filtered = stocks.filter { it.percentChange >= _uiState.value.minGain }
+                    val filtered = stocks.filter { it.percentChange >= BigDecimal.valueOf(_uiState.value.minGain) }
                     _uiState.update { it.copy(isLoading = false, stocks = filtered) }
                 },
                 onFailure = { err ->

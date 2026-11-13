@@ -43,8 +43,8 @@ class WeeklySummaryRepositoryImpl @Inject constructor(
 
         // Fetch market context to construct weekly summary
         val stocks = psxRepository.getStocks().getOrDefault(emptyList())
-        val gainersCount = stocks.count { it.change > 0 }
-        val losersCount = stocks.count { it.change < 0 }
+        val gainersCount = stocks.count { it.change > java.math.BigDecimal.ZERO }
+        val losersCount = stocks.count { it.change < java.math.BigDecimal.ZERO }
 
         val marketTrend = when {
             gainersCount > losersCount -> "BULLISH"

@@ -21,6 +21,7 @@ data class DashboardUiState(
     val stocks: List<Stock> = emptyList(),
     val holdings: List<PortfolioHolding> = emptyList(),
     val feedItems: List<FeedItem> = emptyList(),
+    val recentIdea: com.igent.mobile.data.local.entity.IdeaCardEntity? = null,
     val errorMessage: String? = null
 )
 
@@ -28,7 +29,8 @@ data class DashboardUiState(
 class DashboardViewModel @Inject constructor(
     private val getStocksUseCase: GetStocksUseCase,
     private val getPortfolioUseCase: GetPortfolioUseCase,
-    private val getFeedItemsUseCase: GetFeedItemsUseCase
+    private val getFeedItemsUseCase: GetFeedItemsUseCase,
+    private val ideaCardRepository: com.igent.mobile.domain.repository.IdeaCardRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DashboardUiState())
@@ -46,6 +48,14 @@ class DashboardViewModel @Inject constructor(
 
             val stocks = stocksResult.getOrDefault(emptyList())
             val feeds = feedResult.getOrDefault(emptyList())
+
+            try {
+                ideaCardRepository.initializeDefaultIdeaCards()
+                val cards = ideaCardRepository.generateDailyIdeaCards()
+                _uiState.update { it.copy(recentIdea = cards.firstOrNull()) }
+            } catch (e: Exception) {
+                // ignore
+            }
 
             _uiState.update {
                 it.copy(

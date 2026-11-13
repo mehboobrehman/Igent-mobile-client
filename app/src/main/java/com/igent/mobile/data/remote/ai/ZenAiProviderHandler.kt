@@ -1,5 +1,6 @@
 package com.igent.mobile.data.remote.ai
 
+import kotlinx.coroutines.CancellationException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -20,7 +21,11 @@ class ZenAiProviderHandler @Inject constructor(
         messages: List<ChatMessage>,
         preferredModel: String = "zen-gpt"
     ): Result<String> {
-        val authHeader = if (apiKey.isNotBlank() && !apiKey.startsWith("Bearer ")) "Bearer $apiKey" else apiKey.ifBlank { "Bearer zen-placeholder-key" }
+        if (apiKey.isBlank()) {
+            return Result.failure(IllegalArgumentException("API key cannot be blank for Zen AI provider"))
+        }
+
+        val authHeader = if (apiKey.startsWith("Bearer ")) apiKey else "Bearer $apiKey"
         val modelList = (listOf(preferredModel) + supportedModels).distinct()
 
         for (model in modelList) {
@@ -32,6 +37,7 @@ class ZenAiProviderHandler @Inject constructor(
                     return Result.success(content)
                 }
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 // Continue to next Zen model variant
             }
         }

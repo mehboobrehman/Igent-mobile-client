@@ -1,5 +1,7 @@
 package com.igent.mobile.domain.model
 
+import java.math.BigDecimal
+
 data class Message(
     val id: String,
     val senderId: String,
@@ -11,11 +13,11 @@ data class Message(
 data class Stock(
     val symbol: String,
     val name: String,
-    val price: Double,
-    val change: Double,
-    val percentChange: Double,
-    val high: Double,
-    val low: Double,
+    val price: BigDecimal,
+    val change: BigDecimal,
+    val percentChange: BigDecimal,
+    val high: BigDecimal,
+    val low: BigDecimal,
     val volume: Long
 )
 
@@ -39,20 +41,20 @@ data class UserPlaceholder(
 data class PortfolioHolding(
     val symbol: String,
     val name: String,
-    val quantity: Double,
-    val averagePrice: Double,
-    val currentPrice: Double,
-    val totalValue: Double,
-    val unrealizedPnl: Double,
-    val unrealizedPnlPct: Double
+    val quantity: BigDecimal,
+    val averagePrice: BigDecimal,
+    val currentPrice: BigDecimal,
+    val totalValue: BigDecimal,
+    val unrealizedPnl: BigDecimal,
+    val unrealizedPnlPct: BigDecimal
 )
 
 data class PortfolioTransaction(
     val id: String,
     val symbol: String,
     val type: String, // "BUY" or "SELL"
-    val quantity: Double,
-    val price: Double,
+    val quantity: BigDecimal,
+    val price: BigDecimal,
     val timestamp: Long
 )
 
@@ -66,12 +68,12 @@ data class CompanyInfo(
     val symbol: String,
     val name: String,
     val sector: String,
-    val marketCap: Double?,
-    val freeFloatPct: Double?,
-    val eps: Double?,
-    val pe: Double?,
-    val w52High: Double?,
-    val w52Low: Double?,
+    val marketCap: BigDecimal?,
+    val freeFloatPct: BigDecimal?,
+    val eps: BigDecimal?,
+    val pe: BigDecimal?,
+    val w52High: BigDecimal?,
+    val w52Low: BigDecimal?,
     val kse100: Boolean
 )
 

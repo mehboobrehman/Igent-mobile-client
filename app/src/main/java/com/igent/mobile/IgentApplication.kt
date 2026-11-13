@@ -41,7 +41,8 @@ class IgentApplication : Application(), androidx.work.Configuration.Provider {
 // ...
     private fun scheduleTelemetrySync() {
         val constraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .setRequiredNetworkType(NetworkType.UNMETERED)
+            .setRequiresBatteryNotLow(true)
             .build()
 
         val syncWorkRequest = PeriodicWorkRequestBuilder<TelemetrySyncWorker>(
@@ -65,7 +66,8 @@ class IgentApplication : Application(), androidx.work.Configuration.Provider {
 
     private fun scheduleDailyAgent() {
         val constraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .setRequiredNetworkType(NetworkType.UNMETERED)
+            .setRequiresBatteryNotLow(true)
             .build()
 
         val dailyWorkRequest = PeriodicWorkRequestBuilder<DailyAgentWorker>(

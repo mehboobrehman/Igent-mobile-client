@@ -2,6 +2,7 @@ package com.igent.mobile.domain.engine
 
 import org.junit.Assert.*
 import org.junit.Test
+import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.ZonedDateTime
@@ -70,12 +71,12 @@ class EngineTest {
     @Test
     fun testA4_Ledger() {
         val rows = listOf(
-            TxRow("1", "stock", "OGDC", "buy", 100.0, 10000.0, 50.0, "2026-01-01"),
-            TxRow("2", "stock", "OGDC", "sell", 50.0, 6000.0, 30.0, "2026-02-01")
+            TxRow("1", "stock", "OGDC", "buy", BigDecimal("100"), BigDecimal("10000"), BigDecimal("50"), "2026-01-01"),
+            TxRow("2", "stock", "OGDC", "sell", BigDecimal("50"), BigDecimal("6000"), BigDecimal("30"), "2026-02-01")
         )
         val result = Ledger.replay(rows)
         assertEquals(1, result.positions.size)
-        assertEquals(50.0, result.positions[0].qty, 1e-9)
+        assertEquals(0, result.positions[0].qty.compareTo(BigDecimal("50")))
         assertEquals(2, result.tx.size)
         assertNotNull(result.tx[1].realized)
     }

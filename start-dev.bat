@@ -48,8 +48,9 @@ if %errorlevel% equ 0 (
 
 echo.
 echo ========================================================
-echo   Telemetry Server is ready!
-echo   - Web Dashboard: http://localhost:3000
+echo   Telemetry Server starting...
+echo   Note: Active port and host network IP addresses are
+echo   printed dynamically upon server start below.
 echo   - Tailing Viewer: Open a new terminal and run:
 echo       cd telemetry-server && npm run tail
 echo ========================================================

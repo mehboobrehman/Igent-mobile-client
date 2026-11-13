@@ -28,10 +28,10 @@ fun PortfolioLedgerScreen(
     var qtyInput by remember { mutableStateOf("") }
     var priceInput by remember { mutableStateOf("") }
 
-    val totalValue = state.holdings.sumOf { it.totalValue }
-    val totalCost = state.holdings.sumOf { it.quantity * it.averagePrice }
-    val totalPnl = totalValue - totalCost
-    val totalPnlPct = if (totalCost > 0) (totalPnl / totalCost) * 100.0 else 0.0
+    val totalValue = state.holdings.map { it.totalValue }.fold(java.math.BigDecimal.ZERO) { acc, v -> acc.add(v) }
+    val totalCost = state.holdings.map { it.quantity.multiply(it.averagePrice) }.fold(java.math.BigDecimal.ZERO) { acc, v -> acc.add(v) }
+    val totalPnl = totalValue.subtract(totalCost)
+    val totalPnlPct = if (totalCost > java.math.BigDecimal.ZERO) totalPnl.divide(totalCost, 4, java.math.RoundingMode.HALF_UP).multiply(java.math.BigDecimal("100")) else java.math.BigDecimal.ZERO
 
     Scaffold(
         topBar = {
@@ -92,7 +92,7 @@ fun PortfolioLedgerScreen(
                             Text(text = "Total Cost: Rs ${String.format(java.util.Locale.US, "%,.2f", totalCost)}")
                             Text(
                                 text = "P&L: Rs ${String.format(java.util.Locale.US, "%,.2f", totalPnl)} (${String.format(java.util.Locale.US, "%.2f", totalPnlPct)}%)",
-                                color = if (totalPnl >= 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                                color = if (totalPnl >= java.math.BigDecimal.ZERO) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
                                 fontWeight = FontWeight.Bold
                             )
                         }
@@ -162,7 +162,7 @@ fun PortfolioLedgerScreen(
                                     text = "P&L: ${String.format(java.util.Locale.US, "%.2f", holding.unrealizedPnl)} (${String.format(java.util.Locale.US, "%.2f", holding.unrealizedPnlPct)}%)",
                                     style = MaterialTheme.typography.bodySmall,
                                     fontWeight = FontWeight.Bold,
-                                    color = if (holding.unrealizedPnl >= 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                                    color = if (holding.unrealizedPnl >= java.math.BigDecimal.ZERO) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
                                 )
                             }
                         }

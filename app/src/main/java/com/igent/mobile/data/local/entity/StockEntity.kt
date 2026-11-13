@@ -3,17 +3,18 @@ package com.igent.mobile.data.local.entity
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.igent.mobile.domain.model.Stock
+import java.math.BigDecimal
 
 @Entity(tableName = "stocks")
 data class StockEntity(
     @PrimaryKey
     val symbol: String,
     val name: String,
-    val price: Double,
-    val change: Double,
-    val percentChange: Double,
-    val high: Double,
-    val low: Double,
+    val price: BigDecimal,
+    val change: BigDecimal,
+    val percentChange: BigDecimal,
+    val high: BigDecimal,
+    val low: BigDecimal,
     val volume: Long
 ) {
     fun toDomain(): Stock = Stock(

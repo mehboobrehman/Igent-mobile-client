@@ -70,6 +70,12 @@ test('Integration Test: Telemetry Server Session Persistence, Export & Endpoints
     const health = await httpRequest(`http://localhost:${port}/health`);
     assert.strictEqual(health.status, 200);
     assert.strictEqual(health.body.status, 'ok');
+    assert.strictEqual(health.body.port, port);
+    assert.strictEqual(Array.isArray(health.body.hostIPs), true);
+    assert.strictEqual(typeof health.body.urls, 'object');
+    assert.strictEqual(health.body.urls.local, `http://localhost:${port}`);
+    assert.strictEqual(Array.isArray(health.body.urls.network), true);
+    assert.strictEqual(health.body.urls.emulator, `http://10.0.2.2:${port}`);
 
     const dashboard = await httpRequest(`http://localhost:${port}/`);
     assert.strictEqual(dashboard.status, 200);

@@ -118,7 +118,7 @@ fun ScreenerScreen(
                                     text = "${stock.percentChange}%",
                                     style = MaterialTheme.typography.bodySmall,
                                     fontWeight = FontWeight.Bold,
-                                    color = if (stock.percentChange >= 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                                    color = if (stock.percentChange >= java.math.BigDecimal.ZERO) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
                                 )
                             }
                         }

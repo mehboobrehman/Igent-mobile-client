@@ -175,7 +175,7 @@ fun PsxScreen(
 
 @Composable
 fun KseSummaryCard(stock: Stock) {
-    val isPositive = stock.change >= 0
+    val isPositive = stock.change >= java.math.BigDecimal.ZERO
     val changeColor = if (isPositive) Color(0xFF2E7D32) else Color(0xFFC62828)
     val containerBg = if (isPositive) Color(0xFFE8F5E9) else Color(0xFFFFEBEE)
 
@@ -250,7 +250,7 @@ fun StockItemCard(
     stock: Stock,
     onClick: () -> Unit
 ) {
-    val isPositive = stock.change >= 0
+    val isPositive = stock.change >= java.math.BigDecimal.ZERO
     val changeColor = if (isPositive) Color(0xFF2E7D32) else Color(0xFFC62828)
 
     Card(

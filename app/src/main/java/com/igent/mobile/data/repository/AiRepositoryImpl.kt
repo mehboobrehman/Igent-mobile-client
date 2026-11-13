@@ -161,7 +161,6 @@ class AiRepositoryImpl @Inject constructor(
             if (!success) {
                 val zenKeys = mutableListOf<String>()
                 if (apiKey.isNotBlank() && (apiKey.startsWith("zen_") || apiKey.length > 20)) zenKeys.add(apiKey)
-                zenKeys.add("zen-placeholder-key")
 
                 outer@for (key in zenKeys.distinct()) {
                     val authHeader = "Bearer $key"
@@ -176,6 +175,7 @@ class AiRepositoryImpl @Inject constructor(
                                 break@outer
                             }
                         } catch (e: Exception) {
+                            if (e is kotlinx.coroutines.CancellationException) throw e
                             // Continue to next model/key
                         }
                     }
@@ -297,7 +297,6 @@ class AiRepositoryImpl @Inject constructor(
         if (!streamed) {
             val zenKeys = mutableListOf<String>()
             if (apiKey.isNotBlank() && (apiKey.startsWith("zen_") || apiKey.length > 20)) zenKeys.add(apiKey)
-            zenKeys.add("zen-placeholder-key")
 
             outer@for (key in zenKeys.distinct()) {
                 val authHeader = "Bearer $key"

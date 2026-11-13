@@ -7,6 +7,10 @@ import com.igent.mobile.domain.service.MarketDataContextBuilder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.withContext
+import org.jsoup.Jsoup
+import java.math.BigDecimal
+import java.text.NumberFormat
+import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -15,6 +19,12 @@ class MarketDataContextBuilderImpl @Inject constructor(
     private val stockDao: StockDao,
     private val psxRepository: PsxRepository
 ) : MarketDataContextBuilder {
+
+    private fun sanitizeAndDelimit(content: String, maxLength: Int = 500, label: String = "Untrusted Content"): String {
+        val strippedContent = Jsoup.parse(content).text() // Strip HTML/XML markup
+        val cappedContent = strippedContent.take(maxLength)
+        return "<$label>\n$cappedContent\n</$label>"
+    }
 
     override suspend fun buildMarketDataContext(): String = withContext(Dispatchers.IO) {
         val cachedStocks = try {
@@ -40,7 +50,15 @@ class MarketDataContextBuilderImpl @Inject constructor(
             psxRepository.getStocks().getOrDefault(emptyList())
         }
 
+        val currencyFormat = NumberFormat.getCurrencyInstance(Locale("en", "PK"))
+        currencyFormat.maximumFractionDigits = 2
+
+        val percentFormat = NumberFormat.getPercentInstance(Locale.US)
+        percentFormat.minimumFractionDigits = 2
+        percentFormat.maximumFractionDigits = 2
+
         buildString {
+            appendLine("<psx_market_data>")
             appendLine("=== LIVE PSX MARKET DATA CONTEXT ===")
             if (stocks.isNotEmpty()) {
                 appendLine("Current tracked PSX stock quotes (${stocks.size} equities):")
@@ -48,32 +66,44 @@ class MarketDataContextBuilderImpl @Inject constructor(
                 val topLosers = stocks.sortedBy { it.percentChange }.take(3)
 
                 stocks.forEach { stock ->
-                    val sign = if (stock.change >= 0) "+" else ""
-                    appendLine("- ${stock.symbol} (${stock.name}): Price = ${stock.price} PKR, Change = $sign${stock.change} ($sign${stock.percentChange}%), Range = [${stock.low} - ${stock.high}], Vol = ${stock.volume}")
+                    val sign = if (stock.change >= BigDecimal.ZERO) "+" else ""
+                    appendLine("- ${stock.symbol} (${stock.name}): Price = ${currencyFormat.format(stock.price)}, Change = $sign${currencyFormat.format(stock.change)} ($sign${percentFormat.format(stock.percentChange.divide(BigDecimal("100")))}), Range = [${currencyFormat.format(stock.low)} - ${currencyFormat.format(stock.high)}], Vol = ${stock.volume}")
                 }
 
                 if (topGainers.isNotEmpty()) {
-                    appendLine("\nTop Market Gainers: " + topGainers.joinToString { "${it.symbol} (+${it.percentChange}%)" })
+                    val gainersStr = topGainers.joinToString(separator = ", ") { g ->
+                        val pct = percentFormat.format(g.percentChange.divide(BigDecimal("100")))
+                        "${g.symbol} (+$pct)"
+                    }
+                    appendLine("\nTop Market Gainers: $gainersStr")
                 }
                 if (topLosers.isNotEmpty()) {
-                    appendLine("Top Market Decliners: " + topLosers.joinToString { "${it.symbol} (${it.percentChange}%)" })
+                    val declinersStr = topLosers.joinToString(separator = ", ") { d ->
+                        val pct = percentFormat.format(d.percentChange.divide(BigDecimal("100")))
+                        "${d.symbol} ($pct)"
+                    }
+                    appendLine("Top Market Decliners: $declinersStr")
                 }
             } else {
                 appendLine("No live stock quotes currently cached. Provide insights based on macro PSX indicators and general financial principles.")
             }
             appendLine("=====================================")
+            appendLine("</psx_market_data>")
         }
     }
 
     override suspend fun buildSystemMessageWithMarketData(): ChatMessage {
         val contextText = buildMarketDataContext()
-        val systemPrompt = """
-            You are Igent, an expert financial advisor and Pakistan Stock Exchange (PSX) market intelligence assistant.
-            You have direct access to real-time market data quotes.
-            Always reference live prices, percentages, and market trends when providing stock commentary or investment recommendations.
-            
-            $contextText
-        """.trimIndent()
+        val sanitizedContext = sanitizeAndDelimit(contextText, maxLength = 2000, label = "Market Data")
+
+        val promptBuilder = StringBuilder()
+        promptBuilder.appendLine("You are Igent, an expert financial advisor and Pakistan Stock Exchange (PSX) market intelligence assistant.")
+        promptBuilder.appendLine("You have direct access to real-time market data quotes.")
+        promptBuilder.appendLine("Always reference live prices, percentages, and market trends when providing stock commentary or investment recommendations.")
+        promptBuilder.appendLine() // for the blank line
+        promptBuilder.append(sanitizedContext)
+
+        val systemPrompt = promptBuilder.toString()
 
         return ChatMessage(role = "system", content = systemPrompt)
     }

@@ -5,6 +5,20 @@ const TELEMETRY_AUTH_TOKEN = process.env.TELEMETRY_AUTH_TOKEN || 'igent-telemetr
 const fs = require('fs');
 const path = require('path');
 const net = require('net');
+const os = require('os');
+
+function getHostIPs() {
+  const interfaces = os.networkInterfaces();
+  const ips = [];
+  for (const name of Object.keys(interfaces)) {
+    for (const netInterface of interfaces[name]) {
+      if ((netInterface.family === 'IPv4' || netInterface.family === 4) && !netInterface.internal) {
+        ips.push(netInterface.address);
+      }
+    }
+  }
+  return ips;
+}
 
 app.use(express.json());
 
@@ -287,11 +301,29 @@ app.use((req, _, next) => {
 
 // Health check endpoint
 app.get('/health', (_, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  const port = currentActivePort || requestedPort;
+  const hostIPs = getHostIPs();
+  res.json({
+    status: 'ok',
+    port: port,
+    hostIPs: hostIPs,
+    urls: {
+      local: `http://localhost:${port}`,
+      network: hostIPs.map(ip => `http://${ip}:${port}`),
+      emulator: `http://10.0.2.2:${port}`
+    },
+    timestamp: new Date().toISOString()
+  });
 });
 
 // Root: Serve Web UI Dashboard
 app.get('/', (_, res) => {
+  const port = currentActivePort || requestedPort;
+  const hostIPs = getHostIPs();
+  const networkUrlsHtml = hostIPs.length > 0 
+    ? hostIPs.map(ip => `<div class="text-emerald-400 font-semibold break-all"><a href="http://${ip}:${port}" target="_blank" class="hover:underline">http://${ip}:${port}</a></div>`).join('')
+    : '<div class="text-slate-500 italic">No non-internal IPv4 detected</div>';
+
   res.send(`<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -316,6 +348,45 @@ app.get('/', (_, res) => {
         <button onclick="refreshData()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-1.5 rounded text-sm font-medium transition">Refresh</button>
       </div>
     </header>
+
+    <!-- Server Connection & Host Addresses Card -->
+    <div class="bg-slate-800 border border-slate-700 rounded-xl p-4 mb-6 shadow">
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-3 border-b border-slate-700 pb-3">
+        <div>
+          <h2 class="text-lg font-semibold text-emerald-400 flex items-center gap-2">
+            <span>🌐</span> Server Connection &amp; Host Addresses
+          </h2>
+          <p class="text-xs text-slate-400 mt-0.5">Use these addresses to connect clients, devices, or emulators to the telemetry collector.</p>
+        </div>
+        <div class="flex items-center gap-2 bg-slate-900 border border-slate-700 px-3 py-1 rounded-lg">
+          <span class="text-xs text-slate-400">Active Port:</span>
+          <span class="text-sm font-mono font-bold text-emerald-400">${port}</span>
+        </div>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 font-mono text-xs">
+        <div class="bg-slate-900/80 border border-slate-700/70 p-3 rounded-lg">
+          <div class="text-slate-400 font-sans text-xs font-medium mb-1 flex items-center justify-between">
+            <span>Local URL</span>
+            <span class="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded">Host</span>
+          </div>
+          <a href="http://localhost:${port}" target="_blank" class="text-emerald-400 hover:underline break-all font-semibold">http://localhost:${port}</a>
+        </div>
+        <div class="bg-slate-900/80 border border-slate-700/70 p-3 rounded-lg">
+          <div class="text-slate-400 font-sans text-xs font-medium mb-1 flex items-center justify-between">
+            <span>Network IP URLs</span>
+            <span class="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded">LAN / Wi-Fi</span>
+          </div>
+          ${networkUrlsHtml}
+        </div>
+        <div class="bg-slate-900/80 border border-slate-700/70 p-3 rounded-lg">
+          <div class="text-slate-400 font-sans text-xs font-medium mb-1 flex items-center justify-between">
+            <span>Android Emulator URL</span>
+            <span class="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded">ADB / AVD</span>
+          </div>
+          <a href="http://10.0.2.2:${port}" target="_blank" class="text-emerald-400 hover:underline break-all font-semibold">http://10.0.2.2:${port}</a>
+        </div>
+      </div>
+    </div>
 
     <!-- Stats Cards -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -1043,6 +1114,7 @@ app.post('/api/sync', (req, res) => {
 
 // Port fallback mechanism
 const requestedPort = parseInt(process.env.PORT, 10) || 3000;
+let currentActivePort = requestedPort;
 
 function checkPort(port) {
   return new Promise((resolve) => {
@@ -1080,14 +1152,26 @@ async function findAvailablePort(startPort) {
 async function startServer() {
   try {
     const activePort = await findAvailablePort(requestedPort);
+    currentActivePort = activePort;
     if (activePort !== requestedPort) {
       console.log(`[INFO] Requested port ${requestedPort} was busy. Fallback port ${activePort} selected.`);
     }
 
     const server = app.listen(activePort, () => {
+      const hostIPs = getHostIPs();
       console.log(`========================================`);
       console.log(` Igent Telemetry & Remote Config Server `);
-      console.log(` Running on active port: ${activePort}   `);
+      console.log(` Active Port: ${activePort}`);
+      console.log(` Local URL:            http://localhost:${activePort}`);
+      if (hostIPs.length > 0) {
+        hostIPs.forEach(ip => {
+          console.log(` Network IP URL:       http://${ip}:${activePort}`);
+        });
+      } else {
+        console.log(` Network IP URL:       (None detected)`);
+      }
+      console.log(` Android Emulator URL: http://10.0.2.2:${activePort}`);
+      console.log(`----------------------------------------`);
       console.log(` Endpoints:                             `);
       console.log(`   GET  / (Web UI Dashboard)            `);
       console.log(`   POST /api/telemetry                  `);

@@ -2,6 +2,7 @@ package com.igent.mobile.data.local.entity
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import java.math.BigDecimal
 
 @Entity(tableName = "portfolio_transactions")
 data class PortfolioTransactionEntity(
@@ -9,7 +10,7 @@ data class PortfolioTransactionEntity(
     val id: String,
     val symbol: String,
     val type: String, // "BUY" or "SELL"
-    val quantity: Double,
-    val price: Double,
+    val quantity: BigDecimal,
+    val price: BigDecimal,
     val timestamp: Long
 )

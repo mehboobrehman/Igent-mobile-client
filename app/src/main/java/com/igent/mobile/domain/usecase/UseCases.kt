@@ -62,12 +62,12 @@ class RunStockCheckupUseCase @Inject constructor(
 
         val fact = com.igent.mobile.domain.engine.StockFact(
             symbol = stock.symbol,
-            marketCap = stock.price * 1e8,
+            marketCap = stock.price.toDouble() * 1e8,
             freeFloatPct = 20.0,
-            change1mPct = stock.percentChange,
-            close = stock.price,
-            w52High = stock.high,
-            w52Low = stock.low,
+            change1mPct = stock.percentChange.toDouble(),
+            close = stock.price.toDouble(),
+            w52High = stock.high.toDouble(),
+            w52Low = stock.low.toDouble(),
             lastVolume = stock.volume.toDouble(),
             avgVolume60 = 50000.0,
             avgVolume20 = 45000.0,
@@ -116,7 +116,7 @@ class RunScreenerUseCase @Inject constructor(
         if (stocksRes.isFailure) return stocksRes
         val stocks = stocksRes.getOrThrow()
         // Filter or rank stocks using Screener engine logic
-        val filtered = stocks.filter { it.price > 0.0 }
+        val filtered = stocks.filter { it.price > java.math.BigDecimal.ZERO }
         return Result.success(filtered)
     }
 }
