@@ -74,6 +74,7 @@ android {
         debug {
             buildConfigField("Boolean", "DEBUG_TELEMETRY_ENABLED", "true")
             applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
         }
         release {
             isMinifyEnabled = true
