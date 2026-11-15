@@ -76,14 +76,19 @@ fi
 
 # Locate GitHub CLI (gh) executable
 GH_CMD=""
-if command -v gh &>/dev/null; then
-    GH_CMD="gh"
-elif command -v gh.exe &>/dev/null; then
-    GH_CMD="gh.exe"
+if [ -f "C:/Users/mehboob.rehman/Downloads/gh_2.102.0_windows_386/bin/gh.exe" ]; then
+    GH_CMD="C:/Users/mehboob.rehman/Downloads/gh_2.102.0_windows_386/bin/gh.exe"
 elif [ -f "/c/Users/mehboob.rehman/Downloads/gh_2.102.0_windows_386/bin/gh.exe" ]; then
     GH_CMD="/c/Users/mehboob.rehman/Downloads/gh_2.102.0_windows_386/bin/gh.exe"
-elif [ -f "C:/Users/mehboob.rehman/Downloads/gh_2.102.0_windows_386/bin/gh.exe" ]; then
-    GH_CMD="C:/Users/mehboob.rehman/Downloads/gh_2.102.0_windows_386/bin/gh.exe"
+elif command -v gh.exe &>/dev/null; then
+    GH_CMD="gh.exe"
+elif command -v gh &>/dev/null; then
+    # Verify if it's official gh or node package
+    if gh --version 2>&1 | grep -q "gh version"; then
+        GH_CMD="gh"
+    else
+        GH_CMD="C:/Users/mehboob.rehman/Downloads/gh_2.102.0_windows_386/bin/gh.exe"
+    fi
 elif [ -n "${GH_PATH:-}" ] && [ -f "$GH_PATH" ]; then
     GH_CMD="$GH_PATH"
 else
