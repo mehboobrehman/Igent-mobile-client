@@ -7,20 +7,24 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class ConfigRepository @Inject constructor(
-    private val apiService: ConfigApiService,
-    private val logger: AgentLogger
+open class ConfigRepository @Inject constructor(
+    private val apiService: ConfigApiService?,
+    private val logger: AgentLogger?
 ) {
+    constructor() : this(null, null)
+
     private val _config = MutableStateFlow(RemoteConfig())
-    val config: StateFlow<RemoteConfig> = _config
+    open val config: StateFlow<RemoteConfig> = _config
 
     suspend fun fetchConfig() {
         try {
-            val remoteConfig = apiService.getConfig()
-            _config.value = remoteConfig
-            logger.i("Config", "Remote config fetched successfully")
+            if (apiService != null) {
+                val remoteConfig = apiService.getConfig()
+                _config.value = remoteConfig
+                logger?.i("Config", "Remote config fetched successfully")
+            }
         } catch (e: Exception) {
-            logger.e("Config", "Failed to fetch remote config, using defaults", e)
+            logger?.e("Config", "Failed to fetch remote config, using defaults", e)
             // Fallback to default or simulated values if needed
         }
     }

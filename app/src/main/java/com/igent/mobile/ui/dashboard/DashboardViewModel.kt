@@ -12,6 +12,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -42,33 +43,48 @@ class DashboardViewModel @Inject constructor(
 
     fun loadData() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-            val stocksResult = getStocksUseCase()
-            val feedResult = getFeedItemsUseCase()
-
-            val stocks = stocksResult.getOrDefault(emptyList())
-            val feeds = feedResult.getOrDefault(emptyList())
-
             try {
-                ideaCardRepository.initializeDefaultIdeaCards()
-                val cards = ideaCardRepository.generateDailyIdeaCards()
-                _uiState.update { it.copy(recentIdea = cards.firstOrNull()) }
-            } catch (e: Exception) {
-                // ignore
-            }
+                _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+                val stocksResult = try { getStocksUseCase() } catch (e: Exception) { Result.success(emptyList()) }
+                val feedResult = try { getFeedItemsUseCase() } catch (e: Exception) { Result.success(emptyList()) }
 
-            _uiState.update {
-                it.copy(
-                    isLoading = false,
-                    stocks = stocks,
-                    feedItems = feeds.take(5)
-                )
+                val stocks = stocksResult.getOrDefault(emptyList())
+                val feeds = feedResult.getOrDefault(emptyList())
+
+                try {
+                    ideaCardRepository.initializeDefaultIdeaCards()
+                    val cards = ideaCardRepository.generateDailyIdeaCards()
+                    _uiState.update { it.copy(recentIdea = cards.firstOrNull()) }
+                } catch (e: Exception) {
+                    // ignore
+                }
+
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        stocks = stocks,
+                        feedItems = feeds.take(5)
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        errorMessage = e.localizedMessage ?: "Failed to load dashboard data"
+                    )
+                }
             }
         }
 
         viewModelScope.launch {
-            getPortfolioUseCase().collect { holdingsList ->
-                _uiState.update { it.copy(holdings = holdingsList) }
+            try {
+                getPortfolioUseCase()
+                    .catch { emit(emptyList()) }
+                    .collect { holdingsList ->
+                        _uiState.update { it.copy(holdings = holdingsList) }
+                    }
+            } catch (e: Exception) {
+                // Handle portfolio collection exception gracefully
             }
         }
     }

@@ -52,13 +52,5 @@ jobs:
       - name: Lint
         run: ./gradlew lint
 
-      - name: Release Build Verification
-        run: ./gradlew assembleRelease
-
-      # Potential integration point for secret scanning or dependency review tools
-      # Example: 
-      # - name: Run Snyk
-      #   uses: snyk/actions/gradle@master
-      #   with:
-      #     token: ${{ secrets.SNYK_TOKEN }}
-
+      - name: Build Verification (Debug & Release)
+        run: ./gradlew assembleDebug assembleRelease

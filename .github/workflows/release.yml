@@ -6,7 +6,7 @@ on:
       - 'v*'
 
 jobs:
-  build:
+  release:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -22,19 +22,132 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Build APKs
+      - name: Build APKs (Debug & Release)
         run: ./gradlew assembleDebug assembleRelease
 
-      - name: Rename APKs
+      - name: Process Version, Checksums & Step Summary
+        shell: python3 {0}
         run: |
-          mv app/build/outputs/apk/debug/app-debug.apk Igent-debug.apk
-          mv app/build/outputs/apk/release/app-release.apk Igent-release.apk
+          import os
+          import hashlib
+          from pathlib import Path
 
-      - name: Create Release
+          def get_file_size_str(size_bytes):
+              for unit in ['B', 'KB', 'MB', 'GB']:
+                  if size_bytes < 1024.0:
+                      return f"{size_bytes:.2f} {unit}"
+                  size_bytes /= 1024.0
+              return f"{size_bytes:.2f} TB"
+
+          # 1. Read version from version.properties or tag
+          version_props = {}
+          if os.path.exists('version.properties'):
+              with open('version.properties') as f:
+                  for line in f:
+                      if '=' in line and not line.strip().startswith('#'):
+                          k, v = line.strip().split('=', 1)
+                          version_props[k] = v
+
+          major = version_props.get('MAJOR', '1')
+          minor = version_props.get('MINOR', '0')
+          patch = version_props.get('PATCH', '0')
+          version = f"{major}.{minor}.{patch}"
+
+          tag = os.environ.get('GITHUB_REF_NAME', '')
+          if tag.startswith('v'):
+              version = tag[1:]
+
+          print(f"Target Version: {version}")
+
+          # 2. Locate and rename APKs
+          debug_src = Path('app/build/outputs/apk/debug/app-debug.apk')
+          release_src = Path('app/build/outputs/apk/release/app-release.apk')
+
+          debug_dest = Path(f'Igent-v{version}-debug.apk')
+          release_dest = Path(f'Igent-v{version}-release.apk')
+
+          artifacts = []
+          if debug_src.exists():
+              debug_src.rename(debug_dest)
+              artifacts.append(debug_dest)
+          else:
+              print(f"Warning: Debug APK not found at {debug_src}")
+
+          if release_src.exists():
+              release_src.rename(release_dest)
+              artifacts.append(release_dest)
+          else:
+              print(f"Warning: Release APK not found at {release_src}")
+
+          # 3. Compute SHA-256 and file sizes
+          summary_data = []
+          sha256_lines = []
+
+          for art in artifacts:
+              sha256_hash = hashlib.sha256()
+              with open(art, 'rb') as f:
+                  for byte_block in iter(lambda: f.read(4096), b""):
+                      sha256_hash.update(byte_block)
+              file_hash = sha256_hash.hexdigest()
+              file_size_bytes = art.stat().st_size
+              file_size_str = get_file_size_str(file_size_bytes)
+
+              sha256_lines.append(f"{file_hash}  {art.name}")
+              summary_data.append({
+                  "version": version,
+                  "status": "Success",
+                  "name": art.name,
+                  "hash": file_hash,
+                  "size": file_size_str
+              })
+
+          with open('SHA256SUMS', 'w') as f:
+              f.write('\n'.join(sha256_lines) + '\n')
+
+          # 4. Generate Markdown Summary & Release Notes
+          md_lines = [
+              f"# Release Summary: v{version}",
+              "",
+              "| Version Number | Build Status | Artifact Name | SHA-256 Hash | File Size |",
+              "|---|---|---|---|---|"
+          ]
+
+          for item in summary_data:
+              md_lines.append(
+                  f"| `{item['version']}` | ✅ **{item['status']}** | `{item['name']}` | `{item['hash']}` | {item['size']} |"
+              )
+
+          md_lines.extend([
+              "",
+              "### Checksums (`SHA256SUMS`)",
+              "```",
+              *sha256_lines,
+              "```"
+          ])
+
+          markdown_content = '\n'.join(md_lines)
+
+          # Write to GitHub Step Summary
+          step_summary_path = os.environ.get('GITHUB_STEP_SUMMARY')
+          if step_summary_path:
+              with open(step_summary_path, 'a') as f:
+                  f.write(markdown_content + '\n')
+
+          # Write release notes to file
+          with open('release_notes.md', 'w') as f:
+              f.write(markdown_content + '\n')
+
+          print("Release processing completed successfully.")
+
+      - name: Create GitHub Release & Upload Assets
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            Igent-debug.apk
-            Igent-release.apk
+            Igent-v*-debug.apk
+            Igent-v*-release.apk
+            SHA256SUMS
+          body_path: release_notes.md
+          draft: false
+          prerelease: false
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+          GITHUB_TOKEN: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}

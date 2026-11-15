@@ -14,10 +14,12 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class AgentLogger @Inject constructor(
-    @ApplicationContext private val context: Context,
-    private val logDao: LogDao
+open class AgentLogger @Inject constructor(
+    @ApplicationContext private val context: Context?,
+    private val logDao: LogDao?
 ) {
+    constructor() : this(null, null)
+
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val logCounter = AtomicInteger(0)
 
@@ -39,7 +41,9 @@ class AgentLogger @Inject constructor(
 
     fun triggerSync() {
         try {
-            TelemetrySyncWorker.enqueueOneTimeSync(context)
+            if (context != null) {
+                TelemetrySyncWorker.enqueueOneTimeSync(context)
+            }
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -56,13 +60,15 @@ class AgentLogger @Inject constructor(
         scope.launch {
             try {
                 val formattedMessage = if (correlationId != null) "[$correlationId] $message" else message
-                logDao.insert(
-                    LogEntity(
-                        level = level,
-                        tag = tag,
-                        message = formattedMessage
+                if (logDao != null) {
+                    logDao.insert(
+                        LogEntity(
+                            level = level,
+                            tag = tag,
+                            message = formattedMessage
+                        )
                     )
-                )
+                }
                 if (immediateSync || level == "ERROR" || level == "FATAL") {
                     triggerSync()
                 } else {

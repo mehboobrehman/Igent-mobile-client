@@ -29,40 +29,51 @@ class DebugViewModel @Inject constructor(
     val selectedLevel: StateFlow<String> = _selectedLevel.asStateFlow()
 
     private val allLogs: StateFlow<List<LogEntity>> = logDao.getLast200Logs()
-        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+        .catch { emit(emptyList()) }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     val logs: StateFlow<List<LogEntity>> = combine(allLogs, _selectedLevel) { logs, level ->
-        if (level == "ALL") {
-            logs
-        } else {
-            logs.filter { it.level.equals(level, ignoreCase = true) }
+        try {
+            if (level == "ALL") {
+                logs
+            } else {
+                logs.filter { it.level.equals(level, ignoreCase = true) }
+            }
+        } catch (e: Exception) {
+            emptyList()
         }
-    }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     val config: StateFlow<RemoteConfig> = configRepository.config
 
     val telemetryBaseUrl: StateFlow<String> = preferencesDataSource.telemetryBaseUrl
+        .catch { emit("http://10.0.2.2:3000/") }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "http://10.0.2.2:3000/")
 
     val networkStats: StateFlow<NetworkStats> = allLogs.map { logList ->
-        val networkLogs = logList.filter { it.tag == "NetworkTelemetry" }
-        val requests = networkLogs.filter { it.message.startsWith("<--") }
-        val total = requests.size
-        val failed = requests.count { it.message.contains("[ClientError]") || it.message.contains("[ServerError]") || it.level == "ERROR" }
-        
-        var totalLatency = 0L
-        var latencyCount = 0
-        for (log in requests) {
-            val match = Regex("Latency: (\\d+)ms").find(log.message)
-            if (match != null) {
-                val lat = match.groupValues[1].toLongOrNull() ?: 0L
-                totalLatency += lat
-                latencyCount++
+        try {
+            val networkLogs = logList.filter { it.tag == "NetworkTelemetry" }
+            val requests = networkLogs.filter { it.message.startsWith("<--") }
+            val total = requests.size
+            val failed = requests.count { it.message.contains("[ClientError]") || it.message.contains("[ServerError]") || it.level.equals("ERROR", true) }
+            
+            var totalLatency = 0L
+            var latencyCount = 0
+            for (log in requests) {
+                val msg = log.message
+                val match = Regex("Latency: (\\d+)ms").find(msg)
+                if (match != null && match.groupValues.size > 1) {
+                    val lat = match.groupValues[1].toLongOrNull() ?: 0L
+                    totalLatency += lat
+                    latencyCount++
+                }
             }
+            val avgLatency = if (latencyCount > 0) totalLatency / latencyCount else 0L
+            NetworkStats(totalRequests = total, failedRequests = failed, averageLatencyMs = avgLatency)
+        } catch (e: Exception) {
+            NetworkStats()
         }
-        val avgLatency = if (latencyCount > 0) totalLatency / latencyCount else 0L
-        NetworkStats(totalRequests = total, failedRequests = failed, averageLatencyMs = avgLatency)
-    }.stateIn(viewModelScope, SharingStarted.Lazily, NetworkStats())
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, NetworkStats())
 
     fun setLevelFilter(level: String) {
         _selectedLevel.value = level

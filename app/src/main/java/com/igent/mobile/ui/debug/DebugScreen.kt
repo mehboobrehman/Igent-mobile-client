@@ -191,9 +191,13 @@ fun DebugScreen(
 @Composable
 fun LogItem(log: LogEntity) {
     val dateFormat = SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault())
-    val time = dateFormat.format(Date(log.timestamp))
+    val time = try { dateFormat.format(Date(log.timestamp)) } catch (e: Exception) { "00:00:00.000" }
     
-    val color = when (log.level.uppercase()) {
+    val level = log.level ?: "INFO"
+    val tag = log.tag ?: "General"
+    val message = log.message ?: ""
+
+    val color = when (level.uppercase()) {
         "ERROR" -> Color.Red
         "WARN" -> Color(0xFFFF8C00) // Dark Orange
         "INFO" -> Color(0xFF0066CC)
@@ -212,13 +216,13 @@ fun LogItem(log: LogEntity) {
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(
-                        text = log.level,
+                        text = level,
                         color = color,
                         fontWeight = FontWeight.Bold,
                         fontSize = 12.sp
                     )
                     Text(
-                        text = log.tag,
+                        text = tag,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -232,7 +236,7 @@ fun LogItem(log: LogEntity) {
             }
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = log.message,
+                text = message,
                 fontSize = 12.sp,
                 style = MaterialTheme.typography.bodyMedium
             )
