@@ -130,13 +130,55 @@ fun IgentAppShell(initialTargetScreen: String? = null) {
             }
             composable(Screen.Dashboard.route) {
                 DashboardScreen(
-                    onNavigateToStocks = { navController.navigate(Screen.Stocks.route) },
-                    onNavigateToCheckup = { navController.navigate(Screen.StockCheckup.route) },
-                    onNavigateToPortfolio = { navController.navigate(Screen.Portfolio.route) },
-                    onNavigateToScreener = { navController.navigate(Screen.Screener.route) },
-                    onNavigateToIdeaCards = { navController.navigate(Screen.IdeaCards.route) },
-                    onNavigateToAcademy = { navController.navigate(Screen.Learning.route) },
-                    onNavigateToRss = { navController.navigate(Screen.Rss.route) }
+                    onNavigateToStocks = {
+                        navController.navigate(Screen.Stocks.route) {
+                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    onNavigateToCheckup = {
+                        navController.navigate(Screen.StockCheckup.route) {
+                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    onNavigateToPortfolio = {
+                        navController.navigate(Screen.Portfolio.route) {
+                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    onNavigateToScreener = {
+                        navController.navigate(Screen.Screener.route) {
+                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    onNavigateToIdeaCards = {
+                        navController.navigate(Screen.IdeaCards.route) {
+                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    onNavigateToAcademy = {
+                        navController.navigate(Screen.Learning.route) {
+                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    onNavigateToRss = {
+                        navController.navigate(Screen.Rss.route) {
+                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
                 )
             }
             composable(Screen.Chat.route) { ChatScreen() }

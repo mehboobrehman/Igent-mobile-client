@@ -12,13 +12,12 @@ import javax.inject.Inject
 data class AuthUiState(
     val openRouterKey: String = "",
     val groqKey: String = "",
-    val placeholderEmail: String = "",
-    val placeholderPassword: String = "",
-    val isLoginMode: Boolean = true,
+    val googleUserEmail: String = "",
+    val googleAuthToken: String = "",
     val isLoading: Boolean = false,
     val successMessage: String? = null,
     val errorMessage: String? = null,
-    val isApiKeyValid: Boolean = false,
+    val hasEnteredApiKey: Boolean = false,
     val isLoggedIn: Boolean = false
 )
 
@@ -40,24 +39,21 @@ class AuthViewModel @Inject constructor(
                 val rawApiKey = preferencesDataSource.apiKey.first()
                 val deobfuscatedApiKey = KeyObfuscator.deobfuscate(rawApiKey)
                 
-                val rawCredentials = preferencesDataSource.placeholderCredentials.first()
-                var email = ""
-                var pass = ""
-                if (rawCredentials.contains(":")) {
-                    val parts = rawCredentials.split(":", limit = 2)
-                    email = parts[0]
-                    pass = parts[1]
-                } else if (rawCredentials.isNotBlank()) {
-                    email = rawCredentials
-                }
+                val email = preferencesDataSource.googleUserEmail.first()
+                val token = preferencesDataSource.googleAuthToken.first()
+                val hasEnteredKey = preferencesDataSource.hasEnteredApiKey.first()
+                val placeholder = preferencesDataSource.placeholderCredentials.first()
+
+                val loggedIn = email.isNotBlank() || deobfuscatedApiKey.isNotBlank() || placeholder.isNotBlank()
 
                 _uiState.update {
                     it.copy(
                         openRouterKey = deobfuscatedApiKey,
-                        groqKey = deobfuscatedApiKey, // Can also support separate if needed, using primary api key for both or mapping
-                        placeholderEmail = email,
-                        placeholderPassword = pass,
-                        isLoggedIn = deobfuscatedApiKey.isNotBlank() || email.isNotBlank()
+                        groqKey = deobfuscatedApiKey,
+                        googleUserEmail = email,
+                        googleAuthToken = token,
+                        hasEnteredApiKey = hasEnteredKey,
+                        isLoggedIn = loggedIn
                     )
                 }
             } catch (e: Exception) {
@@ -74,16 +70,30 @@ class AuthViewModel @Inject constructor(
         _uiState.update { it.copy(groqKey = key, errorMessage = null, successMessage = null) }
     }
 
-    fun updatePlaceholderEmail(email: String) {
-        _uiState.update { it.copy(placeholderEmail = email, errorMessage = null, successMessage = null) }
-    }
+    fun signInWithGoogle() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, errorMessage = null, successMessage = null) }
+            try {
+                kotlinx.coroutines.delay(800) // Simulate OAuth handshake
+                val mockEmail = "user.igent@gmail.com"
+                val mockToken = "oauth2_google_token_${System.currentTimeMillis()}"
 
-    fun updatePlaceholderPassword(password: String) {
-        _uiState.update { it.copy(placeholderPassword = password, errorMessage = null, successMessage = null) }
-    }
-
-    fun toggleAuthMode() {
-        _uiState.update { it.copy(isLoginMode = !it.isLoginMode, errorMessage = null, successMessage = null) }
+                preferencesDataSource.saveGoogleUserSession(mockEmail, mockToken)
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        googleUserEmail = mockEmail,
+                        googleAuthToken = mockToken,
+                        isLoggedIn = true,
+                        successMessage = "Signed in with Google successfully!"
+                    )
+                }
+            } catch (e: java.io.IOException) {
+                _uiState.update { it.copy(isLoading = false, errorMessage = "Network failure during Google sign-in. Please check your connection.") }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoading = false, errorMessage = "Google sign-in failed: ${e.localizedMessage}") }
+            }
+        }
     }
 
     fun saveApiKeys() {
@@ -96,17 +106,17 @@ class AuthViewModel @Inject constructor(
                     return@launch
                 }
 
-                // Validate key format roughly
                 if (keyToSave.length < 10) {
                     _uiState.update { it.copy(isLoading = false, errorMessage = "API Key appears too short or invalid.") }
                     return@launch
                 }
 
                 preferencesDataSource.saveApiKey(keyToSave)
+                preferencesDataSource.saveHasEnteredApiKey(true)
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        isApiKeyValid = true,
+                        hasEnteredApiKey = true,
                         isLoggedIn = true,
                         successMessage = "API Keys saved and obfuscated securely!"
                     )
@@ -117,40 +127,13 @@ class AuthViewModel @Inject constructor(
         }
     }
 
-    fun loginPlaceholder() {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null, successMessage = null) }
-            val state = _uiState.value
-            if (state.placeholderEmail.isBlank() || !state.placeholderEmail.contains("@")) {
-                _uiState.update { it.copy(isLoading = false, errorMessage = "Please enter a valid email address.") }
-                return@launch
-            }
-            if (state.placeholderPassword.length < 4) {
-                _uiState.update { it.copy(isLoading = false, errorMessage = "Password must be at least 4 characters.") }
-                return@launch
-            }
-
-            try {
-                val credentialString = "${state.placeholderEmail}:${state.placeholderPassword}"
-                preferencesDataSource.savePlaceholderCredentials(credentialString)
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        isLoggedIn = true,
-                        successMessage = if (state.isLoginMode) "Logged in successfully!" else "Account created successfully!"
-                    )
-                }
-            } catch (e: Exception) {
-                _uiState.update { it.copy(isLoading = false, errorMessage = "Authentication failed: ${e.localizedMessage}") }
-            }
-        }
-    }
-
     fun logout() {
         viewModelScope.launch {
             try {
                 preferencesDataSource.saveApiKey("")
+                preferencesDataSource.saveGoogleUserSession("", "")
                 preferencesDataSource.savePlaceholderCredentials("")
+                preferencesDataSource.saveHasEnteredApiKey(false)
                 _uiState.update {
                     AuthUiState()
                 }

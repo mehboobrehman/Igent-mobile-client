@@ -29,6 +29,9 @@ open class PreferencesDataSource @Inject constructor(
         val PLACEHOLDER_CREDENTIALS = stringPreferencesKey("placeholder_credentials")
         val SELECTED_AI_PROVIDER = stringPreferencesKey("selected_ai_provider")
         val TELEMETRY_BASE_URL = stringPreferencesKey("telemetry_base_url")
+        val HAS_ENTERED_API_KEY = booleanPreferencesKey("has_entered_api_key")
+        val GOOGLE_USER_EMAIL = stringPreferencesKey("google_user_email")
+        val GOOGLE_AUTH_TOKEN = stringPreferencesKey("google_auth_token")
     }
 
     val apiKey: Flow<String> = if (context != null) {
@@ -113,6 +116,33 @@ open class PreferencesDataSource @Inject constructor(
         flowOf("http://10.0.2.2:3000/")
     }
 
+    val hasEnteredApiKey: Flow<Boolean> = if (context != null) {
+        context.dataStore.data
+            .map { preferences ->
+                preferences[PreferencesKeys.HAS_ENTERED_API_KEY] ?: false
+            }
+    } else {
+        flowOf(false)
+    }
+
+    val googleUserEmail: Flow<String> = if (context != null) {
+        context.dataStore.data
+            .map { preferences ->
+                preferences[PreferencesKeys.GOOGLE_USER_EMAIL] ?: ""
+            }
+    } else {
+        flowOf("")
+    }
+
+    val googleAuthToken: Flow<String> = if (context != null) {
+        context.dataStore.data
+            .map { preferences ->
+                preferences[PreferencesKeys.GOOGLE_AUTH_TOKEN] ?: ""
+            }
+    } else {
+        flowOf("")
+    }
+
     suspend fun saveApiKey(key: String) {
         context?.dataStore?.edit { preferences ->
             val obfuscated = com.igent.mobile.data.util.KeyObfuscator.obfuscate(key)
@@ -141,6 +171,19 @@ open class PreferencesDataSource @Inject constructor(
     suspend fun saveRssAlertsEnabled(enabled: Boolean) {
         context?.dataStore?.edit { preferences ->
             preferences[PreferencesKeys.RSS_ALERTS_ENABLED] = enabled
+        }
+    }
+
+    suspend fun saveHasEnteredApiKey(entered: Boolean) {
+        context?.dataStore?.edit { preferences ->
+            preferences[PreferencesKeys.HAS_ENTERED_API_KEY] = entered
+        }
+    }
+
+    suspend fun saveGoogleUserSession(email: String, token: String) {
+        context?.dataStore?.edit { preferences ->
+            preferences[PreferencesKeys.GOOGLE_USER_EMAIL] = email
+            preferences[PreferencesKeys.GOOGLE_AUTH_TOKEN] = token
         }
     }
 

@@ -29,12 +29,18 @@ fun AuthScreen(
 
     var openRouterKeyVisible by remember { mutableStateOf(false) }
     var groqKeyVisible by remember { mutableStateOf(false) }
-    var passwordVisible by remember { mutableStateOf(false) }
+
+    // Subsequent app launch auto-bypass check
+    LaunchedEffect(uiState.isLoggedIn, uiState.hasEnteredApiKey, uiState.openRouterKey) {
+        if (uiState.isLoggedIn && (uiState.hasEnteredApiKey || uiState.openRouterKey.isNotBlank())) {
+            onNavigateToMain()
+        }
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Igent Mobile - Authentication & Settings") },
+                title = { Text("Igent Mobile - Authentication & API Setup") },
                 actions = {
                     IconButton(onClick = onNavigateToSettings) {
                         Icon(Icons.Default.Settings, contentDescription = "Settings")
@@ -73,13 +79,13 @@ fun AuthScreen(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Secure AI Authentication & Session",
+                        text = "Google OAuth & Secure AI Session",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Configure your OpenRouter / Groq API keys with AES encryption or sign in to your Igent session.",
+                        text = "Sign in securely with Google and configure your AI API keys.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -119,150 +125,161 @@ fun AuthScreen(
                 }
             }
 
-            // Section 1: API Keys Configuration
+            // Section 1: Google OAuth Sign-in / Session Card
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(
                     modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = "AI API Keys Configuration (Secure Local Storage)",
+                        text = "Google Account Authentication",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.align(Alignment.Start)
                     )
 
-                    OutlinedTextField(
-                        value = uiState.openRouterKey,
-                        onValueChange = { viewModel.updateOpenRouterKey(it) },
-                        label = { Text("OpenRouter API Key (sk-or-v1-...)") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        visualTransformation = if (openRouterKeyVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                        trailingIcon = {
-                            val image = if (openRouterKeyVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
-                            IconButton(onClick = { openRouterKeyVisible = !openRouterKeyVisible }) {
-                                Icon(imageVector = image, contentDescription = "Toggle OpenRouter Key visibility")
+                    if (!uiState.isLoggedIn) {
+                        Button(
+                            onClick = { viewModel.signInWithGoogle() },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(50.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surface),
+                            elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp),
+                            enabled = !uiState.isLoading
+                        ) {
+                            if (uiState.isLoading) {
+                                CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.AccountCircle,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(
+                                    text = "Sign in with Google",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    fontWeight = FontWeight.Medium
+                                )
                             }
                         }
-                    )
-
-                    OutlinedTextField(
-                        value = uiState.groqKey,
-                        onValueChange = { viewModel.updateGroqKey(it) },
-                        label = { Text("Groq API Key (gsk_...)") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        visualTransformation = if (groqKeyVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                        trailingIcon = {
-                            val image = if (groqKeyVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
-                            IconButton(onClick = { groqKeyVisible = !groqKeyVisible }) {
-                                Icon(imageVector = image, contentDescription = "Toggle Groq Key visibility")
+                    } else {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column {
+                                Text(
+                                    text = "Signed in as:",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = uiState.googleUserEmail.ifBlank { "Authenticated User" },
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
                             }
-                        }
-                    )
-
-                    Button(
-                        onClick = { viewModel.saveApiKeys() },
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = !uiState.isLoading
-                    ) {
-                        if (uiState.isLoading) {
-                            CircularProgressIndicator(modifier = Modifier.size(20.dp), color = MaterialTheme.colorScheme.onPrimary)
-                        } else {
-                            Icon(Icons.Default.Save, contentDescription = null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Save & Encrypt API Keys")
+                            OutlinedButton(
+                                onClick = { viewModel.logout() },
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                            ) {
+                                Icon(Icons.Default.ExitToApp, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Sign Out")
+                            }
                         }
                     }
                 }
             }
 
-            // Section 2: Placeholder Login / Session Management Form
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Text(
-                        text = if (uiState.isLoginMode) "Placeholder Account Login" else "Create Placeholder Account",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-
-                    OutlinedTextField(
-                        value = uiState.placeholderEmail,
-                        onValueChange = { viewModel.updatePlaceholderEmail(it) },
-                        label = { Text("Email Address") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
-                    )
-
-                    OutlinedTextField(
-                        value = uiState.placeholderPassword,
-                        onValueChange = { viewModel.updatePlaceholderPassword(it) },
-                        label = { Text("Password") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                        trailingIcon = {
-                            val image = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
-                            IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                                Icon(imageVector = image, contentDescription = "Toggle Password visibility")
-                            }
-                        }
-                    )
-
-                    Button(
-                        onClick = { viewModel.loginPlaceholder() },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
-                        enabled = !uiState.isLoading
-                    ) {
-                        Text(if (uiState.isLoginMode) "Sign In" else "Register Account")
-                    }
-
-                    TextButton(
-                        onClick = { viewModel.toggleAuthMode() },
-                        modifier = Modifier.align(Alignment.CenterHorizontally)
+            // Section 2: API Keys Configuration (Shown on first launch after login until API key is entered)
+            if (uiState.isLoggedIn && !uiState.hasEnteredApiKey) {
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Text(
-                            text = if (uiState.isLoginMode) "Don't have an account? Sign Up" else "Already have an account? Sign In",
+                            text = "AI API Keys Configuration (First-Time Setup)",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
                         )
+                        Text(
+                            text = "Please enter your OpenRouter or Groq API key to proceed.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        OutlinedTextField(
+                            value = uiState.openRouterKey,
+                            onValueChange = { viewModel.updateOpenRouterKey(it) },
+                            label = { Text("OpenRouter API Key (sk-or-v1-...)") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            visualTransformation = if (openRouterKeyVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                            trailingIcon = {
+                                val image = if (openRouterKeyVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
+                                IconButton(onClick = { openRouterKeyVisible = !openRouterKeyVisible }) {
+                                    Icon(imageVector = image, contentDescription = "Toggle OpenRouter Key visibility")
+                                }
+                            }
+                        )
+
+                        OutlinedTextField(
+                            value = uiState.groqKey,
+                            onValueChange = { viewModel.updateGroqKey(it) },
+                            label = { Text("Groq API Key (gsk_...)") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            visualTransformation = if (groqKeyVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                            trailingIcon = {
+                                val image = if (groqKeyVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
+                                IconButton(onClick = { groqKeyVisible = !groqKeyVisible }) {
+                                    Icon(imageVector = image, contentDescription = "Toggle Groq Key visibility")
+                                }
+                            }
+                        )
+
+                        Button(
+                            onClick = { viewModel.saveApiKeys() },
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = !uiState.isLoading
+                        ) {
+                            if (uiState.isLoading) {
+                                CircularProgressIndicator(modifier = Modifier.size(20.dp), color = MaterialTheme.colorScheme.onPrimary)
+                            } else {
+                                Icon(Icons.Default.Save, contentDescription = null)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Save & Encrypt API Keys")
+                            }
+                        }
                     }
                 }
             }
 
-            // Action / Navigation Buttons
-            Spacer(modifier = Modifier.height(8.dp))
+            // Action / Navigation Button
+            if (uiState.isLoggedIn && (uiState.hasEnteredApiKey || uiState.openRouterKey.isNotBlank())) {
+                Spacer(modifier = Modifier.height(8.dp))
 
-            Button(
-                onClick = onNavigateToMain,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
-            ) {
-                Icon(Icons.Default.ArrowForward, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Proceed to Igent Main Dashboard", fontWeight = FontWeight.Bold)
-            }
-
-            if (uiState.isLoggedIn) {
-                OutlinedButton(
-                    onClick = { viewModel.logout() },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                Button(
+                    onClick = onNavigateToMain,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
                 ) {
-                    Icon(Icons.Default.ExitToApp, contentDescription = null)
+                    Icon(Icons.Default.ArrowForward, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Clear Session / Logout")
+                    Text("Proceed to Igent Main Dashboard", fontWeight = FontWeight.Bold)
                 }
             }
         }
