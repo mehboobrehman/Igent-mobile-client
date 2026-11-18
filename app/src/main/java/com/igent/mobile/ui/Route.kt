@@ -2,6 +2,7 @@ package com.igent.mobile.ui
 
 sealed class Screen(val route: String) {
     object Auth : Screen("auth")
+    object ApiKey : Screen("api_key")
     object Dashboard : Screen("dashboard")
     object Chat : Screen("chat")
     object Stocks : Screen("stocks")

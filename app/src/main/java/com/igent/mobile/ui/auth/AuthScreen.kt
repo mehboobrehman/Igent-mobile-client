@@ -21,26 +21,28 @@ import androidx.hilt.navigation.compose.hiltViewModel
 @Composable
 fun AuthScreen(
     onNavigateToMain: () -> Unit,
+    onNavigateToApiKey: () -> Unit,
     onNavigateToSettings: () -> Unit = {},
     viewModel: AuthViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val scrollState = rememberScrollState()
 
-    var openRouterKeyVisible by remember { mutableStateOf(false) }
-    var groqKeyVisible by remember { mutableStateOf(false) }
-
     // Subsequent app launch auto-bypass check
-    LaunchedEffect(uiState.isLoggedIn, uiState.hasEnteredApiKey, uiState.openRouterKey) {
-        if (uiState.isLoggedIn && (uiState.hasEnteredApiKey || uiState.openRouterKey.isNotBlank())) {
-            onNavigateToMain()
+    LaunchedEffect(uiState.isLoggedIn, uiState.hasEnteredApiKey) {
+        if (uiState.isLoggedIn) {
+            if (uiState.hasEnteredApiKey) {
+                onNavigateToMain()
+            } else {
+                onNavigateToApiKey()
+            }
         }
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Igent Mobile - Authentication & API Setup") },
+                title = { Text("Igent Mobile - Authentication") },
                 actions = {
                     IconButton(onClick = onNavigateToSettings) {
                         Icon(Icons.Default.Settings, contentDescription = "Settings")
@@ -79,13 +81,13 @@ fun AuthScreen(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Google OAuth & Secure AI Session",
+                        text = "Secure AI Session",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Sign in securely with Google and configure your AI API keys.",
+                        text = "Sign in securely with Google to access your financial personalized data.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -140,7 +142,7 @@ fun AuthScreen(
                         modifier = Modifier.align(Alignment.Start)
                     )
 
-                    if (!uiState.isLoggedIn) {
+                    if (uiState.googleUserEmail.isBlank()) {
                         Button(
                             onClick = { viewModel.signInWithGoogle() },
                             modifier = Modifier
@@ -180,7 +182,7 @@ fun AuthScreen(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Text(
-                                    text = uiState.googleUserEmail.ifBlank { "Authenticated User" },
+                                    text = uiState.googleUserEmail,
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -198,80 +200,18 @@ fun AuthScreen(
                 }
             }
 
-            // Section 2: API Keys Configuration (Shown on first launch after login until API key is entered)
-            if (uiState.isLoggedIn && !uiState.hasEnteredApiKey) {
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Text(
-                            text = "AI API Keys Configuration (First-Time Setup)",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Text(
-                            text = "Please enter your OpenRouter or Groq API key to proceed.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-
-                        OutlinedTextField(
-                            value = uiState.openRouterKey,
-                            onValueChange = { viewModel.updateOpenRouterKey(it) },
-                            label = { Text("OpenRouter API Key (sk-or-v1-...)") },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true,
-                            visualTransformation = if (openRouterKeyVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                            trailingIcon = {
-                                val image = if (openRouterKeyVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
-                                IconButton(onClick = { openRouterKeyVisible = !openRouterKeyVisible }) {
-                                    Icon(imageVector = image, contentDescription = "Toggle OpenRouter Key visibility")
-                                }
-                            }
-                        )
-
-                        OutlinedTextField(
-                            value = uiState.groqKey,
-                            onValueChange = { viewModel.updateGroqKey(it) },
-                            label = { Text("Groq API Key (gsk_...)") },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true,
-                            visualTransformation = if (groqKeyVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                            trailingIcon = {
-                                val image = if (groqKeyVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
-                                IconButton(onClick = { groqKeyVisible = !groqKeyVisible }) {
-                                    Icon(imageVector = image, contentDescription = "Toggle Groq Key visibility")
-                                }
-                            }
-                        )
-
-                        Button(
-                            onClick = { viewModel.saveApiKeys() },
-                            modifier = Modifier.fillMaxWidth(),
-                            enabled = !uiState.isLoading
-                        ) {
-                            if (uiState.isLoading) {
-                                CircularProgressIndicator(modifier = Modifier.size(20.dp), color = MaterialTheme.colorScheme.onPrimary)
-                            } else {
-                                Icon(Icons.Default.Save, contentDescription = null)
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Save & Encrypt API Keys")
-                            }
-                        }
-                    }
-                }
-            }
-
             // Action / Navigation Button
-            if (uiState.isLoggedIn && (uiState.hasEnteredApiKey || uiState.openRouterKey.isNotBlank())) {
+            if (uiState.isLoggedIn) {
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Button(
-                    onClick = onNavigateToMain,
+                    onClick = {
+                        if (uiState.hasEnteredApiKey) {
+                            onNavigateToMain()
+                        } else {
+                            onNavigateToApiKey()
+                        }
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(50.dp),
@@ -279,7 +219,10 @@ fun AuthScreen(
                 ) {
                     Icon(Icons.Default.ArrowForward, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Proceed to Igent Main Dashboard", fontWeight = FontWeight.Bold)
+                    Text(
+                        text = if (uiState.hasEnteredApiKey) "Proceed to Dashboard" else "Configure API Keys",
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
         }

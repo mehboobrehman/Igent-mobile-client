@@ -18,6 +18,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.igent.mobile.ui.Screen
+import com.igent.mobile.ui.auth.ApiKeyScreen
 import com.igent.mobile.ui.auth.AuthScreen
 import com.igent.mobile.ui.dashboard.DashboardScreen
 import com.igent.mobile.ui.chat.ChatScreen
@@ -56,7 +57,7 @@ fun IgentAppShell(initialTargetScreen: String? = null) {
         }
     }
 
-    val showBottomBar = currentRoute != Screen.Auth.route
+    val showBottomBar = currentRoute != Screen.Auth.route && currentRoute != Screen.ApiKey.route
 
     Scaffold(
         topBar = {
@@ -95,7 +96,7 @@ fun IgentAppShell(initialTargetScreen: String? = null) {
                             onClick = {
                                 if (currentRoute != screen.route) {
                                     navController.navigate(screen.route) {
-                                        popUpTo(navController.graph.findStartDestination().id) {
+                                        popUpTo(Screen.Dashboard.route) {
                                             saveState = true
                                         }
                                         launchSingleTop = true
@@ -121,9 +122,23 @@ fun IgentAppShell(initialTargetScreen: String? = null) {
                             popUpTo(Screen.Auth.route) { inclusive = true }
                         }
                     },
+                    onNavigateToApiKey = {
+                        navController.navigate(Screen.ApiKey.route) {
+                            popUpTo(Screen.Auth.route) { inclusive = true }
+                        }
+                    },
                     onNavigateToSettings = {
                         navController.navigate(Screen.Settings.route) {
                             popUpTo(Screen.Auth.route) { inclusive = true }
+                        }
+                    }
+                )
+            }
+            composable(Screen.ApiKey.route) {
+                ApiKeyScreen(
+                    onNavigateToMain = {
+                        navController.navigate(Screen.Dashboard.route) {
+                            popUpTo(Screen.ApiKey.route) { inclusive = true }
                         }
                     }
                 )
@@ -132,49 +147,49 @@ fun IgentAppShell(initialTargetScreen: String? = null) {
                 DashboardScreen(
                     onNavigateToStocks = {
                         navController.navigate(Screen.Stocks.route) {
-                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            popUpTo(Screen.Dashboard.route) { saveState = true }
                             launchSingleTop = true
                             restoreState = true
                         }
                     },
                     onNavigateToCheckup = {
                         navController.navigate(Screen.StockCheckup.route) {
-                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            popUpTo(Screen.Dashboard.route) { saveState = true }
                             launchSingleTop = true
                             restoreState = true
                         }
                     },
                     onNavigateToPortfolio = {
                         navController.navigate(Screen.Portfolio.route) {
-                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            popUpTo(Screen.Dashboard.route) { saveState = true }
                             launchSingleTop = true
                             restoreState = true
                         }
                     },
                     onNavigateToScreener = {
                         navController.navigate(Screen.Screener.route) {
-                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            popUpTo(Screen.Dashboard.route) { saveState = true }
                             launchSingleTop = true
                             restoreState = true
                         }
                     },
                     onNavigateToIdeaCards = {
                         navController.navigate(Screen.IdeaCards.route) {
-                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            popUpTo(Screen.Dashboard.route) { saveState = true }
                             launchSingleTop = true
                             restoreState = true
                         }
                     },
                     onNavigateToAcademy = {
                         navController.navigate(Screen.Learning.route) {
-                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            popUpTo(Screen.Dashboard.route) { saveState = true }
                             launchSingleTop = true
                             restoreState = true
                         }
                     },
                     onNavigateToRss = {
                         navController.navigate(Screen.Rss.route) {
-                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            popUpTo(Screen.Dashboard.route) { saveState = true }
                             launchSingleTop = true
                             restoreState = true
                         }
