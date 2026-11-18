@@ -11,3 +11,5 @@ local.properties
 gradle.properties
 Igent-1.0.7-portable/
 Igent-*.apk
+.active-port
+telemetry-server/.active-port
