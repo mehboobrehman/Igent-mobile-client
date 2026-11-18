@@ -6,6 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const net = require('net');
 const os = require('os');
+const bonjour = require('bonjour')();
 
 function getHostIPs() {
   const interfaces = os.networkInterfaces();
@@ -1159,6 +1160,20 @@ async function startServer() {
 
     const server = app.listen(activePort, () => {
       const hostIPs = getHostIPs();
+      
+      // Publish mDNS/Bonjour service on _igent-telemetry._tcp.local
+      try {
+        bonjour.publish({
+          name: 'Igent Telemetry Server',
+          type: 'igent-telemetry',
+          port: activePort,
+          txt: { version: '1.0.0', path: '/api/telemetry' }
+        });
+        console.log(`[INFO] Broadcasted mDNS service _igent-telemetry._tcp.local on port ${activePort}`);
+      } catch (mdnsErr) {
+        console.error('[ERROR] Failed to publish mDNS service:', mdnsErr);
+      }
+
       console.log(`========================================`);
       console.log(` Igent Telemetry & Remote Config Server `);
       console.log(` Active Port: ${activePort}`);
@@ -1203,6 +1218,13 @@ async function startServer() {
 // Graceful shutdown handling
 function gracefulShutdown(signal) {
   console.log(`[INFO] Received ${signal}. Shutting down telemetry server gracefully...`);
+  try {
+    bonjour.unpublishAll(() => {
+      bonjour.destroy();
+    });
+  } catch (e) {
+    // ignore
+  }
   try {
     const activePortFilePath = path.join(__dirname, '.active-port');
     if (fs.existsSync(activePortFilePath)) {

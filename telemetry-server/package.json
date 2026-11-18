@@ -10,6 +10,7 @@
     "tail": "node tail.js"
   },
   "dependencies": {
+    "bonjour": "^3.5.1",
     "express": "^4.19.2"
   },
   "keywords": [
