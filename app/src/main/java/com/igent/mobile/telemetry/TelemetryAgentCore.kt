@@ -25,7 +25,8 @@ class TelemetryAgentCore @Inject constructor(
     private val logDao: LogDao,
     private val telemetryApiService: TelemetryApiService,
     private val connectivityObserver: NetworkConnectivityObserver,
-    private val rateLimiter: TelemetryRateLimiter
+    private val rateLimiter: TelemetryRateLimiter,
+    private val telemetryDiscoveryManager: TelemetryDiscoveryManager
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -71,6 +72,7 @@ class TelemetryAgentCore @Inject constructor(
     suspend fun handleConnectionRestored() {
         transitionState(TelemetryConnectionState.CONNECTING)
         try {
+            telemetryDiscoveryManager.startDiscovery()
             val handshakeSuccess = performHandshake()
             if (handshakeSuccess) {
                 transitionState(TelemetryConnectionState.CONNECTED)

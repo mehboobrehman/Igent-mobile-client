@@ -6,10 +6,17 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class TelemetryRateLimiter @Inject constructor(
+class TelemetryRateLimiter {
     private val defaultLimitPerMinute: Int
-) {
-    constructor() : this(120)
+
+    @Inject
+    constructor() {
+        this.defaultLimitPerMinute = 120
+    }
+
+    constructor(defaultLimitPerMinute: Int) {
+        this.defaultLimitPerMinute = defaultLimitPerMinute
+    }
 
     private val categoryLimits = ConcurrentHashMap<String, Int>().apply {
         put("logs", 180)

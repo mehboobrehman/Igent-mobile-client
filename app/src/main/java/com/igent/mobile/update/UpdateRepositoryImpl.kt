@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import androidx.core.content.FileProvider
 import com.igent.mobile.BuildConfig
+import com.igent.mobile.util.AgentLogger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -20,8 +21,23 @@ import javax.inject.Singleton
 class UpdateRepositoryImpl @Inject constructor(
     private val gitHubReleaseApi: GitHubReleaseApi,
     private val updatePreferences: UpdatePreferences,
-    private val context: Context
+    private val context: Context,
+    private val logger: AgentLogger,
+    private val isDebugBuild: Boolean = BuildConfig.DEBUG
 ) : UpdateRepository {
+
+    constructor(
+        gitHubReleaseApi: GitHubReleaseApi,
+        updatePreferences: UpdatePreferences,
+        context: Context
+    ) : this(gitHubReleaseApi, updatePreferences, context, AgentLogger(), BuildConfig.DEBUG)
+
+    constructor(
+        gitHubReleaseApi: GitHubReleaseApi,
+        updatePreferences: UpdatePreferences,
+        context: Context,
+        logger: AgentLogger
+    ) : this(gitHubReleaseApi, updatePreferences, context, logger, BuildConfig.DEBUG)
 
     private val okHttpClient = OkHttpClient.Builder()
         .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
@@ -29,38 +45,101 @@ class UpdateRepositoryImpl @Inject constructor(
         .build()
 
     override suspend fun checkForUpdate(): DownloadState {
+        val targetVariant = if (isDebugBuild) "debug" else "release"
+        logger.i("UpdateRepo", "Checking for updates. Build variant: ${if (isDebugBuild) "DEBUG" else "RELEASE"}, target artifact type: $targetVariant")
+
         return try {
             val release = gitHubReleaseApi.getLatestRelease()
+            logger.d("UpdateRepo", "Latest release fetched: ${release.tagName}")
+            logger.d("UpdateRepo", "Available assets in release ${release.tagName}: ${release.assets.map { it.name }}")
+
             if (release.draft || release.prerelease) {
-                // If draft or prerelease, skip standard production check.
+                logger.i("UpdateRepo", "Skipping draft or pre-release: ${release.tagName}")
+                return DownloadState.Idle // Skip if draft or pre-release
             }
 
             val releaseSemVer = SemVer.parse(release.tagName)
-                ?: return DownloadState.Error("Invalid release tag format: ${release.tagName}")
+                ?: run {
+                    logger.e("UpdateRepo", "Invalid release tag format: ${release.tagName}")
+                    return DownloadState.Error("Invalid release tag format: ${release.tagName}")
+                }
 
             val installedSemVer = SemVer.parse(BuildConfig.VERSION_NAME)
-                ?: SemVer(1, 0, 0)
+                ?: run {
+                    logger.w("UpdateRepo", "Could not parse installed version name: ${BuildConfig.VERSION_NAME}. Assuming 1.0.0.")
+                    SemVer(1, 0, 0) // Default to 1.0.0 if parsing fails
+                }
+
+            logger.d("UpdateRepo", "Installed version: $installedSemVer, Release version: $releaseSemVer")
 
             if (releaseSemVer <= installedSemVer) {
+                logger.i("UpdateRepo", "No new update available. Installed version ($installedSemVer) is up to date.")
                 return DownloadState.Idle
             }
 
-            // Select only signed production asset named Igent-release-v<semver>.apk
-            val expectedApkName = "Igent-release-v$releaseSemVer.apk"
-            val apkAsset = release.assets.find { it.name.equals(expectedApkName, ignoreCase = true) }
-                ?: return DownloadState.Error("Production APK asset $expectedApkName not found in release.")
+            val apkAssets = release.assets.filter { it.name.endsWith(".apk", ignoreCase = true) }
 
-            DownloadState.Available(release, apkAsset, releaseSemVer)
+            if (apkAssets.isEmpty()) {
+                val errorMsg = if (isDebugBuild) "Debug APK asset not found for the latest release." else "Production APK asset not found for the latest release."
+                logger.e("UpdateRepo", "No APK assets found for release ${release.tagName}. Available assets: ${release.assets.map { it.name }}")
+                return DownloadState.Error(errorMsg)
+            }
+
+            val matchingAsset = if (isDebugBuild) {
+                val debugAsset = apkAssets.find { it.name.contains("debug", ignoreCase = true) }
+                val releaseAsset = apkAssets.find { 
+                    it.name.contains("release", ignoreCase = true) || 
+                    (!it.name.contains("debug", ignoreCase = true) && (it.name.startsWith("Igent", ignoreCase = true) || it.name.startsWith("app", ignoreCase = true))) 
+                }
+
+                if (debugAsset != null) {
+                    debugAsset
+                } else if (releaseAsset != null) {
+                    logger.e("UpdateRepo", "Cross-variant update attempt: debug build cannot update with release APK (${releaseAsset.name})")
+                    return DownloadState.Error("Cross-variant update denied: cannot update debug build with release APK.")
+                } else {
+                    apkAssets.find { it.name.contains("debug", ignoreCase = true) }
+                }
+            } else {
+                val releaseAsset = apkAssets.find { 
+                    val name = it.name
+                    !name.contains("debug", ignoreCase = true) && 
+                    (name.contains("release", ignoreCase = true) || name.startsWith("Igent", ignoreCase = true) || name.startsWith("app", ignoreCase = true))
+                }
+                val debugAsset = apkAssets.find { it.name.contains("debug", ignoreCase = true) }
+
+                if (releaseAsset != null) {
+                    releaseAsset
+                } else if (debugAsset != null) {
+                    logger.e("UpdateRepo", "Cross-variant update attempt: release build cannot update with debug APK (${debugAsset.name})")
+                    return DownloadState.Error("Cross-variant update denied: cannot update release build with debug APK.")
+                } else {
+                    null
+                }
+            }
+
+            if (matchingAsset == null) {
+                val errorMsg = if (isDebugBuild) "Debug APK asset not found for the latest release." else "Production APK asset not found for the latest release."
+                logger.e("UpdateRepo", errorMsg)
+                return DownloadState.Error(errorMsg)
+            }
+
+            logger.d("UpdateRepo", "Found matching APK asset: ${matchingAsset.name} for release ${release.tagName} (variant: $targetVariant)")
+            DownloadState.Available(release, matchingAsset, releaseSemVer)
+
         } catch (e: java.io.IOException) {
+            logger.e("UpdateRepo", "Network error while checking for updates", e)
             DownloadState.Error("Network error: Please check your internet connection.")
         } catch (e: retrofit2.HttpException) {
-            if (e.code() == 403 || e.code() == 429) {
-                DownloadState.Error("GitHub API rate limit exceeded. Please try again later.")
-            } else {
-                DownloadState.Error("Server error (${e.code()}): ${e.message()}")
+            val errorCode = e.code()
+            logger.e("UpdateRepo", "HTTP error while checking for updates: $errorCode", e)
+            when (errorCode) {
+                403, 429 -> DownloadState.Error("GitHub API rate limit exceeded. Please try again later.")
+                else -> DownloadState.Error("Server error (${errorCode}): ${e.message()}")
             }
         } catch (e: Exception) {
-            DownloadState.Error("Failed to check for updates: ${e.localizedMessage}")
+            logger.e("UpdateRepo", "An unexpected error occurred while checking for updates", e)
+            DownloadState.Error("Failed to check for updates: ${e.localizedMessage ?: "Unknown error"}")
         }
     }
 

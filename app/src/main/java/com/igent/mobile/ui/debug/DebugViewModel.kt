@@ -7,6 +7,9 @@ import com.igent.mobile.data.local.entity.LogEntity
 import com.igent.mobile.data.preferences.PreferencesDataSource
 import com.igent.mobile.data.remote.config.ConfigRepository
 import com.igent.mobile.data.remote.config.RemoteConfig
+import com.igent.mobile.telemetry.TelemetryAgentCore
+import com.igent.mobile.telemetry.TelemetryConnectionState
+import com.igent.mobile.telemetry.TelemetryDiscoveryManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -22,8 +25,13 @@ data class NetworkStats(
 class DebugViewModel @Inject constructor(
     private val logDao: LogDao,
     private val configRepository: ConfigRepository,
-    private val preferencesDataSource: PreferencesDataSource
+    private val preferencesDataSource: PreferencesDataSource,
+    private val telemetryDiscoveryManager: TelemetryDiscoveryManager? = null,
+    private val telemetryAgentCore: TelemetryAgentCore? = null
 ) : ViewModel() {
+
+    val discoveryStatus: StateFlow<String> = telemetryDiscoveryManager?.discoveryStatus ?: MutableStateFlow("Idle").asStateFlow()
+    val connectionState: StateFlow<TelemetryConnectionState> = telemetryAgentCore?.connectionState ?: MutableStateFlow(TelemetryConnectionState.DISCONNECTED).asStateFlow()
 
     private val _selectedLevel = MutableStateFlow<String>("ALL")
     val selectedLevel: StateFlow<String> = _selectedLevel.asStateFlow()
@@ -95,6 +103,10 @@ class DebugViewModel @Inject constructor(
         viewModelScope.launch {
             configRepository.fetchConfig()
         }
+    }
+
+    fun triggerDiscovery() {
+        telemetryDiscoveryManager?.startDiscovery()
     }
 
     fun exportLogsText(): String {

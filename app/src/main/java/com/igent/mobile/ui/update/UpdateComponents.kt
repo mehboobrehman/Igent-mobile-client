@@ -23,7 +23,8 @@ fun UpdateSection(
     val context = LocalContext.current
 
     Card(
-        onClick = { viewModel.checkForUpdates(isManual = true) },
+        onClick = { if (downloadState !is DownloadState.Checking) viewModel.checkForUpdates(isManual = true) },
+        enabled = downloadState !is DownloadState.Checking,
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
@@ -101,7 +102,9 @@ fun UpdateSection(
                 }
             },
             confirmButton = {
-                if (downloadState !is DownloadState.ReadyToInstall && downloadState !is DownloadState.Downloading) {
+                if (downloadState !is DownloadState.ReadyToInstall &&
+                    downloadState !is DownloadState.Downloading &&
+                    downloadState !is DownloadState.Verifying) {
                     TextButton(
                         onClick = { viewModel.startDownload(available.release, available.asset) }
                     ) {

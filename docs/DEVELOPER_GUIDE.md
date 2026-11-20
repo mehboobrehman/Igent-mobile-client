@@ -90,7 +90,39 @@ When paused at a breakpoint on the main thread, the telemetry system's ANR detec
 
 ---
 
-## 6. Troubleshooting Guide
+## 6. Automated Local Network Discovery & Connection Resilience
+
+### 6.1. mDNS / Bonjour Service Discovery
+- **Server-Side**: The Node.js telemetry server uses `bonjour` to broadcast its availability on the local network via service type `_igent-telemetry._tcp.local` on its active port.
+- **Android App-Side**: The `TelemetryDiscoveryManager` utilizes Android's `NsdManager` (`NSD_SERVICE`) to listen for `_igent-telemetry._tcp` services, resolve host IP and port dynamically, and automatically update the telemetry base URL.
+
+### 6.2. Fallback Subnet Scanning & Bootstrap URLs
+- If mDNS discovery times out or is unsupported on the current network interface, the app initiates automatic fallback mechanisms:
+  1. **Bootstrap URLs**: Probes standard development targets such as `http://10.0.2.2:3000/` and `http://localhost:3000/`.
+  2. **Subnet Scanning**: Dynamically determines the device's local IP address and scans subnet IP candidates (`.1` to `.254`) on port `3000` with quick connection timeouts.
+
+### 6.3. Connection Resilience & Exponential Backoff
+- **Backoff Strategy**: Handled by `TelemetryBackoff` implementing exponential backoff with jitter (`1s` to `30s` caps) to prevent network congestion during reconnections.
+- **State Machine**: Tracks connection lifecycle through `TelemetryConnectionState` (`DISCONNECTED`, `CONNECTING`, `CONNECTED`, `DEGRADED`, `OFFLINE`).
+
+### 6.4. UI Connection Status Indicators
+- **Debug Screen**: Navigating to the MDrive Telemetry & Debug screen displays:
+  - Real-time connection status indicator badge (Connected / Connecting / Degraded / Offline).
+  - Active discovery status message (`TelemetryDiscoveryManager` status).
+  - Manual **"Scan Network (mDNS & Subnets)"** trigger button for on-demand discovery.
+
+### 6.5. Network Permissions (`AndroidManifest.xml`)
+To support local network discovery and telemetry transmission, the following permissions are declared in `AndroidManifest.xml`:
+- `android.permission.INTERNET`
+- `android.permission.ACCESS_NETWORK_STATE`
+- `android.permission.ACCESS_WIFI_STATE`
+- `android.permission.CHANGE_WIFI_MULTICAST_STATE` (required for receiving multicast mDNS packets)
+- `android.permission.POST_NOTIFICATIONS`
+- `android.permission.WAKE_LOCK`
+
+---
+
+## 7. Troubleshooting Guide
 
 ### Issue 1: Telemetry not reaching server from emulator / device
 - **Symptom:** Logs appear locally on device but never arrive at `http://localhost:3000`.

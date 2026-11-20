@@ -36,6 +36,8 @@ fun DebugScreen(
     val selectedLevel by viewModel.selectedLevel.collectAsState()
     val networkStats by viewModel.networkStats.collectAsState()
     val telemetryBaseUrl by viewModel.telemetryBaseUrl.collectAsState()
+    val connectionState by viewModel.connectionState.collectAsState()
+    val discoveryStatus by viewModel.discoveryStatus.collectAsState()
     var tempUrl by remember { mutableStateOf(telemetryBaseUrl) }
     LaunchedEffect(telemetryBaseUrl) {
         tempUrl = telemetryBaseUrl
@@ -107,6 +109,58 @@ fun DebugScreen(
                         Text("Total: ${networkStats.totalRequests}")
                         Text("Failed: ${networkStats.failedRequests}", color = if (networkStats.failedRequests > 0) Color.Red else Color.Unspecified)
                         Text("Avg Latency: ${networkStats.averageLatencyMs}ms")
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Connection & Discovery Status Indicator Card
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Connection Status",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Surface(
+                            shape = MaterialTheme.shapes.small,
+                            color = when (connectionState) {
+                                com.igent.mobile.telemetry.TelemetryConnectionState.CONNECTED -> Color(0xFF4CAF50)
+                                com.igent.mobile.telemetry.TelemetryConnectionState.CONNECTING -> Color(0xFFFF9800)
+                                com.igent.mobile.telemetry.TelemetryConnectionState.DEGRADED -> Color(0xFFFFC107)
+                                else -> Color(0xFFF44336)
+                            }
+                        ) {
+                            Text(
+                                text = connectionState.name,
+                                color = Color.White,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Discovery: $discoveryStatus",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Button(
+                        onClick = { viewModel.triggerDiscovery() },
+                        modifier = Modifier.align(Alignment.End)
+                    ) {
+                        Text("Scan Network (mDNS & Subnets)")
                     }
                 }
             }
